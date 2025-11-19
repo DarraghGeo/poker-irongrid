@@ -1,58 +1,413 @@
-# Svelte library
+# Poker Grid Component
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+A comprehensive Svelte 5 component for visualizing and managing poker hand ranges with an interactive 13x13 grid interface.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Installation
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+```bash
+npm install poker-irongrid
 ```
 
-## Developing
+## Peer Dependencies
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- `svelte`: ^5.0.0
+- `poker-bitvaljs`: ^1.0.1 (for equity evaluation)
+- `poker-extval`: ^3.2.0 (for hand evaluation)
+- `poker-rangeman`: ^3.3.2 (for range parsing and filtering)
 
-```sh
-npm run dev
+## Quick Start
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  let hands = {};
+  let visibleHands = {};
+  let deadCards = [];
+  let boardCards = [];
+  let heroCards = [];
+  
+  const ranges = [
+    { name: 'Tight', abbreviation: '22+,A2s+,K9s+,Q9s+,J9s+,T9s,98s,87s,76s,65s,54s,AJo+,KQo' },
+    { name: 'Loose', abbreviation: '22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32+' }
+  ];
+  
+  const colors = [
+    'hsl(60, 100%, 70%)',
+    'hsl(120, 100%, 70%)',
+    'hsl(240, 100%, 85%)'
+  ];
+</script>
+
+<PokerGridPanel
+  bind:hands
+  bind:visibleHands
+  bind:deadCards
+  bind:boardCards
+  bind:heroCards
+  {ranges}
+  {colors}
+/>
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+## API Reference
 
-## Building
+### Props
 
-To build your library:
+#### Core Data Props (Two-way Bound)
 
-```sh
-npm pack
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `hands` | `Object` or `Array<string>` | `{}` | Raw hands map (combos/abstracts) or array of hand strings. Format: `{ "AcKd": ["selected", "hsl(60, 100%, 70%)"], "AA": ["selected"] }` |
+| `visibleHands` | `Object` | `{}` | Visible hands after filtering by dead cards (read-only, automatically computed) |
+| `deadCards` | `Array<string>` | `[]` | Dead cards as two-character codes (e.g., `["Ac", "Kd"]`) |
+| `boardCards` | `Array<string>` | `[]` | Board cards as two-character codes (e.g., `["As", "Kh", "Qc"]`) |
+| `heroCards` | `Array<string>` | `[]` | Hero cards as two-character codes (e.g., `["Ac", "Kd"]`) |
+
+#### Visibility Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `interactive` | `boolean` | `true` | Whether the panel is interactive (shows inputs/controls and allows grid interaction) |
+| `showDeadInputs` | `boolean` | `true` | Show dead cards input fields |
+| `showRangeSelect` | `boolean` | `true` | Show range selection dropdown |
+| `showControls` | `boolean` | `true` | Show hand selector controls (filters, colors, etc.) |
+| `showSummary` | `boolean` | `true` | Show selection summary at bottom |
+| `showTips` | `boolean` | `false` | Show tooltips on click when non-interactive |
+| `enableDetailsPanel` | `boolean` | `false` | Enable double-click details panel |
+
+#### Configuration Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `ranges` | `Array<{name: string, abbreviation: string}>` | `[]` | Predefined ranges for range selection dropdown |
+| `colors` | `Array<string>` | `[]` | Color palette for highlighting hands (HSL format recommended) |
+| `defaultColor` | `string` | `'hsl(0, 0%, 100%)'` | Default background color for uncolored hands |
+| `defaultSelectedColor` | `string` | `'hsl(0, 0%, 85%)'` | Default color for selected hands without explicit color |
+| `evaluator` | `boolean` | `false` | Enable equity evaluation feature (requires hero cards and hands on grid) |
+
+#### Initial State Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `initialHands` | `Object` | `undefined` | Initial hands state (only applied if hands is empty) |
+| `initialBoard` | `Array<string>` | `undefined` | Initial board cards (only applied if boardCards is empty) |
+| `initialDead` | `Array<string>` | `undefined` | Initial dead cards (only applied if deadCards is empty) |
+
+### Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `selectionChange` | `{ hands: Object, visibleHands: Object }` | Fired when hands selection changes |
+| `rangeSelected` | `{ name: string, hands: Object }` | Fired when a range is selected from dropdown |
+| `deadCardsChange` | `{ deadCards: Array<string>, boardCards: Array<string> }` | Fired when dead cards or board cards change |
+| `cellClick` | `{ cellInfo: Object }` | Fired when a grid cell is clicked (when `showTips` is true) |
+| `cellDetails` | `{ cellInfo: Object }` | Fired when a grid cell is double-clicked (when `enableDetailsPanel` is true) |
+
+## Data Structures
+
+### Hand Format
+
+Hands are represented as objects where keys are hand strings and values are arrays of metadata:
+
+```javascript
+{
+  "AcKd": ["selected", "hsl(60, 100%, 70%)"],  // Combo with selection and color
+  "AA": ["selected"],                          // Abstract hand (all AA combos)
+  "AKs": ["hsl(120, 100%, 70%)"]              // Suited hand with color
+}
 ```
 
-To create a production version of your showcase app:
+**Hand String Formats:**
+- **Combos**: `"AcKd"` (specific cards)
+- **Pairs**: `"AA"` (pocket pair)
+- **Suited**: `"AKs"` (suited hand)
+- **Offsuit**: `"AKo"` (offsuit hand)
 
-```sh
-npm run build
+**Metadata Array Values:**
+- `"selected"` - Hand is selected
+- `"hsl(...)"` - HSL color string for highlighting
+
+### Card Format
+
+Cards are represented as two-character strings:
+- First character: Rank (`A`, `K`, `Q`, `J`, `T`, `9`, `8`, `7`, `6`, `5`, `4`, `3`, `2`)
+- Second character: Suit (`c` = clubs, `d` = diamonds, `h` = hearts, `s` = spades)
+
+Examples: `"Ac"`, `"Kd"`, `"Qh"`, `"Js"`
+
+### Range Format
+
+Ranges are arrays of objects with `name` and `abbreviation` properties:
+
+```javascript
+[
+  { 
+    name: 'Tight', 
+    abbreviation: '22+,A2s+,K9s+,Q9s+,J9s+,T9s,98s,87s,76s,65s,54s,AJo+,KQo' 
+  }
+]
 ```
 
-You can preview the production build with `npm run preview`.
+The `abbreviation` uses standard poker range notation (e.g., `22+` = all pairs, `A2s+` = all suited aces, `AJo+` = all offsuit aces).
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Features
 
-## Publishing
+### Interactive Grid
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
+- **13x13 Grid**: Visual representation of all 169 possible starting hands
+- **Click Selection**: Click cells to select/deselect hands
+- **Drag Selection**: Click and drag to select multiple hands
+- **Modifier Keys**:
+  - **Ctrl/Cmd + Click**: Add to selection
+  - **Shift + Click**: Remove from selection
+  - **Normal Click**: Replace selection
 
-To publish your library to [npm](https://www.npmjs.com):
+### Dead Card Filtering
 
-```sh
-npm publish
+- Automatically filters out hands containing dead cards
+- Supports hero cards, board cards, and additional dead cards
+- Real-time filtering as cards are added/removed
+
+### Range Selection
+
+- Apply predefined ranges from dropdown
+- Ranges use standard poker notation
+- Automatically selects all hands in the range
+
+### Hand Filtering
+
+The component includes comprehensive filtering options:
+
+**Made Hands:**
+- One Pair
+- Two Pair
+- Three of a Kind
+- Four of a Kind
+- Straight
+- Flush
+- Full House
+
+**Draws:**
+- Straight Draw
+- Flush Draw
+- Combo Draw
+- Backdoor Flush Draw
+
+**Card Filters:**
+- By Rank (A, K, Q, J, T, 9, 8, 7, 6, 5, 4, 3, 2)
+- By Suit (Clubs, Diamonds, Hearts, Spades)
+- Paired hands
+- Suited hands
+- Offsuit hands
+
+**Selection Actions:**
+- Clear All
+- Inverse Selection
+- Unselect All
+- Remove Selected
+
+### Color Highlighting
+
+- Assign colors to selected hands
+- Multiple colors supported
+- Visual distinction between colored and uncolored hands
+- Color statistics display
+
+### Equity Evaluation
+
+When `evaluator={true}`:
+- Calculate hero equity vs. villain range
+- Requires: 2 hero cards and hands on grid
+- Uses Monte Carlo simulation (10,000 iterations)
+- Displays results as percentages
+- Progress indicator during evaluation
+
+### Responsive Design
+
+- Mobile-friendly layout
+- Touch support for drag selection
+- Adaptive grid sizing
+- Optimized for various screen sizes
+
+## Usage Examples
+
+### Basic Usage
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  let hands = {};
+  let deadCards = [];
+  let boardCards = [];
+</script>
+
+<PokerGridPanel
+  bind:hands
+  bind:deadCards
+  bind:boardCards
+/>
 ```
+
+### With Ranges
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  const ranges = [
+    { name: 'UTG', abbreviation: '22+,A2s+,K9s+,Q9s+,J9s+,T9s,98s,87s,76s,65s,54s,AJo+,KQo' },
+    { name: 'Button', abbreviation: '22+,A2+,K2+,Q2+,J2+,T2+,92+,82+,72+,62+,52+,42+,32+' }
+  ];
+  
+  let hands = {};
+</script>
+
+<PokerGridPanel
+  bind:hands
+  {ranges}
+  showRangeSelect={true}
+/>
+```
+
+### With Colors
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  const colors = [
+    'hsl(60, 100%, 70%)',   // Yellow
+    'hsl(120, 100%, 70%)',  // Green
+    'hsl(240, 100%, 85%)',  // Blue
+    'hsl(300, 100%, 70%)',  // Magenta
+    'hsl(30, 100%, 70%)',   // Orange
+    'hsl(0, 100%, 85%)'     // Red
+  ];
+  
+  let hands = {};
+</script>
+
+<PokerGridPanel
+  bind:hands
+  {colors}
+  showControls={true}
+/>
+```
+
+### With Equity Evaluation
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  let hands = {};
+  let heroCards = ['Ac', 'Kd'];
+  let boardCards = ['As', 'Kh', 'Qc'];
+  let deadCards = [];
+</script>
+
+<PokerGridPanel
+  bind:hands
+  bind:heroCards
+  bind:boardCards
+  bind:deadCards
+  evaluator={true}
+  showSummary={true}
+/>
+```
+
+### Read-Only Display
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  const hands = {
+    "AA": ["selected"],
+    "KK": ["selected"],
+    "QQ": ["hsl(60, 100%, 70%)"]
+  };
+</script>
+
+<PokerGridPanel
+  hands={hands}
+  interactive={false}
+  showTips={true}
+/>
+```
+
+### Handling Events
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  
+  let hands = {};
+  
+  function handleSelectionChange(event) {
+    console.log('Selection changed:', event.detail.hands);
+    // Update your application state
+  }
+  
+  function handleRangeSelected(event) {
+    console.log('Range selected:', event.detail.name);
+    console.log('Hands:', event.detail.hands);
+  }
+</script>
+
+<PokerGridPanel
+  bind:hands
+  on:selectionChange={handleSelectionChange}
+  on:rangeSelected={handleRangeSelected}
+/>
+```
+
+## Styling
+
+The component uses Tailwind CSS classes and CSS custom properties. You can customize the appearance by defining CSS variables:
+
+```css
+:root {
+  --poker-accent: #dc2626;
+  --poker-border: #e5e7eb;
+  --poker-border-light: #d1d5db;
+  --poker-text-primary: #111827;
+  --poker-text-secondary: #6b7280;
+  --poker-white: #ffffff;
+}
+```
+
+## Component Structure
+
+```
+poker-grid/
+├── components/
+│   ├── Grid.svelte              # Main 13x13 grid display
+│   ├── HandSelector.svelte      # Filter and color controls
+│   ├── DeadCardsInput.svelte     # Dead cards input fields
+│   ├── RangeSelect.svelte        # Range selection dropdown
+│   ├── SelectionSummary.svelte   # Summary and evaluation
+│   ├── DetailsPanel.svelte       # Cell details panel
+│   └── PokerGridPanel.svelte     # Main component
+├── utils/
+│   ├── constants.js              # Constants (RANKS, SUITS, etc.)
+│   └── index.js                  # Utility exports
+├── PokerGridManager.js           # Business logic manager
+└── index.js                      # Main entry point
+```
+
+## Browser Support
+
+- Modern browsers with ES6+ support
+- Touch devices (iOS Safari, Chrome Mobile)
+- Desktop browsers (Chrome, Firefox, Safari, Edge)
+
+## License
+
+[Add your license here]
+
+## Contributing
+
+[Add contribution guidelines here]
