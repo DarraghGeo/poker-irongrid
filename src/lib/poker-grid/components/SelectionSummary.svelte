@@ -226,9 +226,9 @@
         disabled={!isButtonEnabled}
         class="px-2 py-1 text-xs rounded border transition-colors"
         style="
-          background-color: {isButtonEnabled ? 'var(--poker-accent)' : 'var(--poker-border-light)'};
-          color: {isButtonEnabled ? 'white' : 'var(--poker-text-secondary)'};
-          border-color: {isButtonEnabled ? 'var(--poker-accent)' : 'var(--poker-border-light)'};
+          background-color: {isButtonEnabled ? '#dc2626' : '#d1d5db'};
+          color: {isButtonEnabled ? 'white' : '#6b7280'};
+          border-color: {isButtonEnabled ? '#dc2626' : '#d1d5db'};
           cursor: {isButtonEnabled ? 'pointer' : 'not-allowed'};
           opacity: {isButtonEnabled ? '1' : '0.6'};
         "

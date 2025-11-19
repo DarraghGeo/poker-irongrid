@@ -8,6 +8,7 @@
 
   export let hands = {};
   export let defaultColor = 'hsl(0, 0%, 100%)';
+  // defaultSelectedColor is passed but only used by manager, not directly in this component
   export let defaultSelectedColor = 'hsl(0, 0%, 85%)';
   export let deadCards = [];
   export let manager = null; // PokerGridManager instance
@@ -403,7 +404,7 @@
 </script>
 
   <div class="poker-grid-container" role="region" aria-label="Poker hand grid container">
-    <div class="poker-grid" bind:this={gridElement} onmousemove={handleMouseMove} role="application" aria-label="Poker hand selection grid" tabindex="0" onmouseup={handleMouseUp}>
+    <div class="poker-grid" bind:this={gridElement} onmousemove={handleMouseMove} role="application" aria-label="Poker hand selection grid" tabindex={interactive ? 0 : -1} onmouseup={handleMouseUp}>
     {#each Array(13) as _, rowIndex}
       {#each Array(13) as __, colIndex}
         {@const cellInfo = getCellInfo(rowIndex, colIndex)}

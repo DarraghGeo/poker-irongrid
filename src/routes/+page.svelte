@@ -27,27 +27,39 @@
 
   // Handle events from the component
   function handleSelectionChange(event) {
-    console.log('Selection changed:', event.detail);
+    // Event handler for selection changes
   }
 
   function handleRangeSelected(event) {
-    console.log('Range selected:', event.detail);
+    // Event handler for range selection
   }
 
   function handleDeadCardsChange(event) {
-    console.log('Dead cards changed:', event.detail);
+    // Event handler for dead cards changes
   }
 
   function handleCellClick(event) {
-    console.log('Cell clicked:', event.detail);
+    // Event handler for cell clicks
   }
 </script>
 
 <div class="min-h-screen bg-gray-50 p-2 sm:p-4">
-  <div class="max-w-6xl mx-auto">
+  <div class="max-w-xl mx-auto">
     <div class="mb-4 sm:mb-6">
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Poker Grid Component Test</h1>
       <p class="text-sm sm:text-base text-gray-600">Test page for the poker-grid package component</p>
+    </div>
+
+    <div class="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+      <h3 class="text-sm sm:text-base font-semibold text-blue-900 mb-2">Usage Instructions:</h3>
+      <ul class="list-disc list-inside text-xs sm:text-sm text-blue-800 space-y-1">
+        <li>Click and drag on the grid to select hands</li>
+        <li>Use Ctrl+Click to add to selection, Shift+Click to remove</li>
+        <li>Enter dead cards, board cards, and hero cards in the input fields</li>
+        <li>Select a range from the dropdown to apply it</li>
+        <li>Use the filter buttons to filter by rank, suit, hand strength, etc.</li>
+        <li>Click color buttons to apply colors to selected hands</li>
+      </ul>
     </div>
 
     <div class="bg-white rounded-lg shadow-lg p-3 sm:p-6 overflow-x-auto">
@@ -96,18 +108,6 @@
           <p class="text-gray-600">{heroCards.length > 0 ? heroCards.join(', ') : 'None'}</p>
         </div>
       </div>
-    </div>
-
-    <div class="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-      <h3 class="text-sm sm:text-base font-semibold text-blue-900 mb-2">Usage Instructions:</h3>
-      <ul class="list-disc list-inside text-xs sm:text-sm text-blue-800 space-y-1">
-        <li>Click and drag on the grid to select hands</li>
-        <li>Use Ctrl+Click to add to selection, Shift+Click to remove</li>
-        <li>Enter dead cards, board cards, and hero cards in the input fields</li>
-        <li>Select a range from the dropdown to apply it</li>
-        <li>Use the filter buttons to filter by rank, suit, hand strength, etc.</li>
-        <li>Click color buttons to apply colors to selected hands</li>
-      </ul>
     </div>
   </div>
 </div>
