@@ -1,0 +1,84 @@
+/**
+ * poker-grid/theme.css
+ * Default theme CSS variables for poker-grid components.
+ * Consumers can override these variables to customize the appearance.
+ */
+
+:root {
+  /* Color Variables */
+  --irongrid-color-primary: #dc2626;
+  --irongrid-color-accent: #dc2626;
+  --irongrid-color-border: #e5e7eb;
+  --irongrid-color-border-light: #d1d5db;
+  --irongrid-color-text-primary: #111827;
+  --irongrid-color-text-secondary: #6b7280;
+  --irongrid-color-text-tertiary: #374151;
+  --irongrid-color-bg-primary: #ffffff;
+  --irongrid-color-bg-secondary: #f9fafb;
+  --irongrid-color-bg-hover: #e5e7eb;
+  --irongrid-color-bg-disabled: #d1d5db;
+  --irongrid-color-white: #ffffff;
+  --irongrid-color-black: #000000;
+  --irongrid-color-focus-ring: rgba(220, 38, 38, 0.1);
+
+  /* Spacing Variables */
+  --irongrid-spacing-xs: 0.125rem;
+  --irongrid-spacing-sm: 0.25rem;
+  --irongrid-spacing-md: 0.5rem;
+  --irongrid-spacing-lg: 0.75rem;
+  --irongrid-spacing-xl: 1rem;
+  --irongrid-grid-container-padding: 0.125rem;
+  --irongrid-grid-container-padding-small: 0.1rem;
+  --irongrid-grid-cell-padding: 0;
+  --irongrid-panel-padding: 0.5rem;
+  --irongrid-input-padding-x: 0.375rem;
+  --irongrid-input-padding-y: 0.25rem;
+  --irongrid-button-padding-x: 0.5rem;
+  --irongrid-button-padding-y: 0.25rem;
+  --irongrid-gap-xs: 0.25rem;
+  --irongrid-gap-sm: 0.5rem;
+  --irongrid-gap-md: 0.75rem;
+
+  /* Typography Variables */
+  --irongrid-font-size-xs: 0.4rem;
+  --irongrid-font-size-sm: 0.625rem;
+  --irongrid-font-size-base: 0.75rem;
+  --irongrid-font-size-md: 0.8125rem;
+  --irongrid-font-size-lg: 0.875rem;
+  --irongrid-font-size-xxs: 0.45rem;
+  --irongrid-font-weight-normal: 400;
+  --irongrid-font-weight-medium: 500;
+  --irongrid-font-weight-semibold: 600;
+  --irongrid-font-family: inherit;
+
+  /* Border Variables */
+  --irongrid-border-width: 1px;
+  --irongrid-border-radius-sm: 0.125rem;
+  --irongrid-border-radius-md: 0.25rem;
+  --irongrid-border-radius-lg: 0.375rem;
+
+  /* Shadow Variables */
+  --irongrid-shadow-sm: 0 0 0 2px rgba(220, 38, 38, 0.1);
+  --irongrid-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* Transition Variables */
+  --irongrid-transition-fast: 0.15s ease;
+  --irongrid-transition-base: 0.2s ease;
+
+  /* Opacity Variables */
+  --irongrid-opacity-disabled: 0.6;
+  --irongrid-opacity-hover: 0.7;
+  --irongrid-opacity-impossible: 0.3;
+
+  /* Z-index Variables */
+  --irongrid-z-tooltip: 10000;
+
+  /* Component-Specific Variables */
+  --irongrid-grid-min-cell-height: 28px;
+  --irongrid-grid-min-cell-height-tablet: 24px;
+  --irongrid-grid-min-cell-height-mobile: 20px;
+  --irongrid-grid-min-cell-height-small: 18px;
+  --irongrid-tooltip-arrow-size: 6px;
+  --irongrid-tooltip-offset: 8px;
+}
+

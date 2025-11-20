@@ -169,11 +169,11 @@
   value={hero}
   oninput={(e) => handleInput(e, 'hero')}
   onfocus={(e) => {
-    e.target.style.borderColor = 'var(--poker-accent)';
-    e.target.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.1)';
+    e.target.style.borderColor = 'var(--irongrid-color-accent)';
+    e.target.style.boxShadow = 'var(--irongrid-shadow-sm)';
   }}
   onblur={(e) => {
-    e.target.style.borderColor = 'var(--poker-border-light)';
+    e.target.style.borderColor = 'var(--irongrid-color-border-light)';
     e.target.style.boxShadow = '';
   }}
   placeholder="Hero"
@@ -184,11 +184,11 @@
   value={board}
   oninput={(e) => handleInput(e, 'board')}
   onfocus={(e) => {
-    e.target.style.borderColor = 'var(--poker-accent)';
-    e.target.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.1)';
+    e.target.style.borderColor = 'var(--irongrid-color-accent)';
+    e.target.style.boxShadow = 'var(--irongrid-shadow-sm)';
   }}
   onblur={(e) => {
-    e.target.style.borderColor = 'var(--poker-border-light)';
+    e.target.style.borderColor = 'var(--irongrid-color-border-light)';
     e.target.style.boxShadow = '';
   }}
   placeholder="Board"
@@ -199,11 +199,11 @@
   value={dead}
   oninput={(e) => handleInput(e, 'dead')}
   onfocus={(e) => {
-    e.target.style.borderColor = 'var(--poker-accent)';
-    e.target.style.boxShadow = '0 0 0 2px rgba(220, 38, 38, 0.1)';
+    e.target.style.borderColor = 'var(--irongrid-color-accent)';
+    e.target.style.boxShadow = 'var(--irongrid-shadow-sm)';
   }}
   onblur={(e) => {
-    e.target.style.borderColor = 'var(--poker-border-light)';
+    e.target.style.borderColor = 'var(--irongrid-color-border-light)';
     e.target.style.boxShadow = '';
   }}
   placeholder="Dead"
@@ -212,9 +212,9 @@
 
 <style>
   .dead-card-input {
-    border-color: var(--poker-border-light);
-    color: var(--poker-text-primary);
-    background-color: var(--poker-white);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    border-color: var(--irongrid-color-border-light);
+    color: var(--irongrid-color-text-primary);
+    background-color: var(--irongrid-color-white);
+    transition: border-color var(--irongrid-transition-base), box-shadow var(--irongrid-transition-base);
   }
 </style>

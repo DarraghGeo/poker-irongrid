@@ -188,7 +188,7 @@
 </script>
 
 <div class="flex items-center justify-between mt-1">
-  <span class="text-xs" style="color: var(--poker-text-secondary);">
+  <span class="text-xs" style="color: var(--irongrid-color-text-secondary);">
     Combinations: 
     <span 
       onclick={handleHighlightedClick}
@@ -226,11 +226,11 @@
         disabled={!isButtonEnabled}
         class="px-2 py-1 text-xs rounded border transition-colors"
         style="
-          background-color: {isButtonEnabled ? '#dc2626' : '#d1d5db'};
-          color: {isButtonEnabled ? 'white' : '#6b7280'};
-          border-color: {isButtonEnabled ? '#dc2626' : '#d1d5db'};
+          background-color: {isButtonEnabled ? 'var(--irongrid-color-primary)' : 'var(--irongrid-color-bg-disabled)'};
+          color: {isButtonEnabled ? 'var(--irongrid-color-white)' : 'var(--irongrid-color-text-secondary)'};
+          border-color: {isButtonEnabled ? 'var(--irongrid-color-primary)' : 'var(--irongrid-color-bg-disabled)'};
           cursor: {isButtonEnabled ? 'pointer' : 'not-allowed'};
-          opacity: {isButtonEnabled ? '1' : '0.6'};
+          opacity: {isButtonEnabled ? '1' : 'var(--irongrid-opacity-disabled)'};
         "
         onmouseover={(e) => {
           if (isButtonEnabled) e.target.style.opacity = '0.9';

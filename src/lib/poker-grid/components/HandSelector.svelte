@@ -253,7 +253,7 @@
   <div class="space-y-1">
     <!-- Colors -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Colors:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Colors:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
       <button
           class="px-1 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 transition-colors flex-shrink-0 whitespace-nowrap"
@@ -282,11 +282,11 @@
 
     <!-- Made -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Made:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Made:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('allMade') ? 'text-white border-red-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('allMade') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('allMade') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'allMade')}
         disabled={boardCards.length < 3}
       >
@@ -294,7 +294,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('onePair') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('onePair') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('onePair') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'onePair')}
         disabled={boardCards.length < 3}
       >
@@ -302,7 +302,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('twoPair') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('twoPair') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('twoPair') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'twoPair')}
         disabled={boardCards.length < 3}
       >
@@ -310,7 +310,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('threeOfAKind') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('threeOfAKind') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('threeOfAKind') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'threeOfAKind')}
         disabled={boardCards.length < 3}
       >
@@ -318,7 +318,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('fourOfAKind') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('fourOfAKind') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('fourOfAKind') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'fourOfAKind')}
         disabled={boardCards.length < 3}
       >
@@ -326,7 +326,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('straight') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('straight') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('straight') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'straight')}
         disabled={boardCards.length < 3}
       >
@@ -334,7 +334,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('flush') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('flush') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('flush') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'flush')}
         disabled={boardCards.length < 3}
       >
@@ -342,7 +342,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('fullHouse') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('fullHouse') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('fullHouse') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'fullHouse')}
         disabled={boardCards.length < 3}
       >
@@ -353,11 +353,11 @@
 
     <!-- Draws -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Draws:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Draws:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
         <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('allMadePlusDraws') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('allMadePlusDraws') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('allMadePlusDraws') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'allMadePlusDraws')}
           disabled={boardCards.length >= 5}
         >
@@ -365,7 +365,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('comboDraw') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('comboDraw') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('comboDraw') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'comboDraw')}
         disabled={boardCards.length >= 5}
       >
@@ -373,7 +373,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('flushDraw') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('flushDraw') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('flushDraw') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'flushDraw')}
         disabled={boardCards.length >= 5}
       >
@@ -381,7 +381,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('straightDraw') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('straightDraw') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('straightDraw') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'straightDraw')}
         disabled={boardCards.length >= 5}
       >
@@ -389,7 +389,7 @@
       </button>
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('backdoorFlushDraw') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('backdoorFlushDraw') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('backdoorFlushDraw') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'backdoorFlushDraw')}
         disabled={boardCards.length >= 5}
       >
@@ -400,12 +400,12 @@
 
     <!-- Ranks -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Ranks:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Ranks:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
       {#each RANKS as rank}
         <button
             class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('rank', rank) ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-            style="{isButtonActive('rank', rank) ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+            style="{isButtonActive('rank', rank) ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'rank', rank)}
         >
           {rank}
@@ -416,18 +416,18 @@
 
     <!-- Suits -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Suits:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Suits:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
         <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('suited') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('suited') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('suited') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'suited')}
         >
           Suited
         </button>
         <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('unsuited') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('unsuited') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('unsuited') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
           onclick={(e) => handleButtonClick(e, 'unsuited')}
         >
           Unsuited
@@ -435,14 +435,14 @@
         {#each SUITS as suit}
       <button
             class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('suit', suit.name) ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'} {suit.color}"
-            style="{isButtonActive('suit', suit.name) ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+            style="{isButtonActive('suit', suit.name) ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
             onclick={(e) => handleButtonClick(e, 'suit', suit.name)}
       >
             {suit.symbol}
       </button>
       <button
             class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('doubleSuit', suit.name) ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'} {suit.color}"
-            style="{isButtonActive('doubleSuit', suit.name) ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+            style="{isButtonActive('doubleSuit', suit.name) ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
             onclick={(e) => handleButtonClick(e, 'doubleSuit', suit.name)}
       >
             {suit.symbol}{suit.symbol}
@@ -453,11 +453,11 @@
 
     <!-- Selected -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--poker-text-secondary);">Selected:</span>
+      <span class="text-xs font-medium whitespace-nowrap" style="color: var(--irongrid-color-text-secondary);">Selected:</span>
       <div class="flex flex-nowrap gap-1 overflow-x-auto flex-1 min-w-0">
       <button
           class="px-2 py-1 border rounded text-xs font-medium transition-colors flex-shrink-0 whitespace-nowrap {isButtonActive('all') ? 'text-white' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}"
-          style="{isButtonActive('all') ? 'background-color: var(--poker-primary); border-color: var(--poker-primary);' : ''}"
+          style="{isButtonActive('all') ? 'background-color: var(--irongrid-color-primary); border-color: var(--irongrid-color-primary);' : ''}"
         onclick={(e) => handleButtonClick(e, 'all')}
       >
           All
@@ -487,10 +487,10 @@
 
 <style>
   .hand-selector {
-    padding: 0.5rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.25rem;
-    background-color: #f9fafb;
+    padding: var(--irongrid-panel-padding);
+    border: var(--irongrid-border-width) solid var(--irongrid-color-border);
+    border-radius: var(--irongrid-border-radius-md);
+    background-color: var(--irongrid-color-bg-secondary);
   }
 
   /* Hide scrollbar but keep scroll functionality */

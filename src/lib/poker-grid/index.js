@@ -6,3 +6,6 @@
 export { default as PokerGridPanel } from './components/PokerGridPanel.svelte';
 export { default } from './components/PokerGridPanel.svelte';
 
+// Export theme CSS for consumers to import
+import './theme.css';
+

@@ -177,18 +177,18 @@
 
 <style>
   .details-panel {
-    margin-top: 0.75rem;
-    padding: 0.5rem;
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.25rem;
+    margin-top: var(--irongrid-spacing-lg);
+    padding: var(--irongrid-panel-padding);
+    background-color: var(--irongrid-color-bg-secondary);
+    border: var(--irongrid-border-width) solid var(--irongrid-color-border);
+    border-radius: var(--irongrid-border-radius-md);
   }
 
   .details-panel-header {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--irongrid-spacing-md);
     position: relative;
   }
 
@@ -197,30 +197,30 @@
     border: none;
     font-size: 1rem;
     line-height: 1;
-    color: #6b7280;
+    color: var(--irongrid-color-text-secondary);
     cursor: pointer;
-    padding: 0.25rem;
+    padding: var(--irongrid-spacing-sm);
     width: 1.25rem;
     height: 1.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.125rem;
-    transition: all 0.15s ease;
-    opacity: 0.6;
+    border-radius: var(--irongrid-border-radius-sm);
+    transition: all var(--irongrid-transition-fast);
+    opacity: var(--irongrid-opacity-disabled);
   }
 
   .details-panel-close:hover {
     opacity: 1;
-    background-color: #e5e7eb;
-    color: #374151;
+    background-color: var(--irongrid-color-bg-hover);
+    color: var(--irongrid-color-text-tertiary);
   }
 
   .details-panel-table {
     display: grid;
     grid-template-columns: auto repeat(4, 1fr);
     gap: 0;
-    font-size: 0.75rem;
+    font-size: var(--irongrid-font-size-base);
     border: none !important;
     border-width: 0 !important;
     border-style: none !important;
@@ -229,7 +229,7 @@
   }
 
   .details-panel-corner {
-    background-color: #f9fafb;
+    background-color: var(--irongrid-color-bg-secondary);
     border: none !important;
     border-width: 0 !important;
     border-style: none !important;
@@ -245,10 +245,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.25rem;
-    font-weight: 600;
-    color: var(--poker-text-primary);
-    background-color: #f9fafb;
+    padding: var(--irongrid-spacing-sm);
+    font-weight: var(--irongrid-font-weight-semibold);
+    color: var(--irongrid-color-text-primary);
+    background-color: var(--irongrid-color-bg-secondary);
     min-height: 1.5rem;
     border: none !important;
     border-width: 0 !important;
@@ -262,16 +262,16 @@
   }
 
   .suit-symbol {
-    font-size: 0.875rem;
+    font-size: var(--irongrid-font-size-lg);
   }
 
   .details-combo-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.25rem 0.375rem;
+    padding: var(--irongrid-spacing-sm) var(--irongrid-input-padding-x);
     min-height: 1.5rem;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--irongrid-transition-fast);
     border: none !important;
     border-width: 0 !important;
     border-style: none !important;
@@ -288,7 +288,7 @@
   }
 
   .details-combo-cell.impossible {
-    opacity: 0.3;
+    opacity: var(--irongrid-opacity-impossible);
   }
 
   .details-combo-cell.selected {
@@ -296,8 +296,8 @@
   }
 
   .combo-text {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--irongrid-font-size-base);
+    font-weight: var(--irongrid-font-weight-semibold);
     display: flex;
     align-items: center;
     text-rendering: optimizeLegibility;
@@ -306,11 +306,11 @@
   }
 
   .combo-rank {
-    color: var(--poker-text-primary);
+    color: var(--irongrid-color-text-primary);
   }
 
   .combo-suit {
-    font-size: 0.875rem;
+    font-size: var(--irongrid-font-size-lg);
   }
 
   .combo-card {
@@ -320,24 +320,24 @@
   }
 
   .combo-card + .combo-card {
-    margin-left: 0.25rem;
+    margin-left: var(--irongrid-spacing-sm);
   }
 
   @media (max-width: 768px) {
     .details-panel {
-      padding: 0.5rem;
+      padding: var(--irongrid-panel-padding);
     }
 
     .details-panel-title {
-      font-size: 0.8125rem;
+      font-size: var(--irongrid-font-size-md);
     }
 
     .combo-text {
-      font-size: 0.625rem;
+      font-size: var(--irongrid-font-size-sm);
     }
 
     .suit-symbol {
-      font-size: 0.875rem;
+      font-size: var(--irongrid-font-size-lg);
     }
   }
 </style>
