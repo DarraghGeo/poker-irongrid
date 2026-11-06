@@ -1,6 +1,6 @@
 {
 	"name": "poker-irongrid",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -31,9 +31,9 @@
 		"svelte": "^5.0.0"
 	},
 	"dependencies": {
-		"poker-bitvaljs": "^1.0.1",
-		"poker-extval": "^3.2.0",
-		"poker-rangeman": "^3.3.2"
+		"poker-bitvaljs": "^1.13.0",
+		"poker-extval": "^6.0.0-beta.6",
+		"poker-rangeman": "^4.0.0-beta.11"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",

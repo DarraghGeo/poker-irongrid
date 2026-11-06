@@ -11,9 +11,9 @@ npm install poker-irongrid
 ## Peer Dependencies
 
 - `svelte`: ^5.0.0
-- `poker-bitvaljs`: ^1.0.1 (for equity evaluation)
-- `poker-extval`: ^3.2.0 (for hand evaluation)
-- `poker-rangeman`: ^3.3.2 (for range parsing and filtering)
+- `poker-bitvaljs`: ^1.13.0 (for equity evaluation)
+- `poker-extval`: ^6.0.0-beta.6 (for hand evaluation)
+- `poker-rangeman`: ^4.0.0-beta.11 (for range parsing and filtering)
 
 ## Quick Start
 
@@ -84,7 +84,8 @@ npm install poker-irongrid
 | `colors` | `Array<string>` | `[]` | Color palette for highlighting hands (HSL format recommended) |
 | `defaultColor` | `string` | `'hsl(0, 0%, 100%)'` | Default background color for uncolored hands |
 | `defaultSelectedColor` | `string` | `'hsl(0, 0%, 85%)'` | Default color for selected hands without explicit color |
-| `evaluator` | `boolean` | `false` | Enable equity evaluation feature (requires hero cards and hands on grid) |
+| `evaluator` | `boolean` | `false` | Show hero's live equity against the hands on the grid (requires hero cards) |
+| `preflopTableUrl` | `string \| null` | `null` | URL of poker-bitvaljs's `bench/preflop-table.bin` for exact preflop equity (Monte Carlo without it) |
 
 #### Initial State Props
 
@@ -216,12 +217,22 @@ The component includes comprehensive filtering options:
 
 ### Equity Evaluation
 
-When `evaluator={true}`:
-- Calculate hero equity vs. villain range
-- Requires: 2 hero cards and hands on grid
-- Uses Monte Carlo simulation (10,000 iterations)
-- Displays results as percentages
-- Progress indicator during evaluation
+When `evaluator={true}`, hero's equity is calculated live (asynchronously) whenever the hero cards,
+board, dead cards or the hands on the grid change; there is no button to press.
+- The summary shows hero vs. villain equity against every selected or colored combo
+- The color buttons' **Eq** mode shows hero's equity against each color's hands
+- Both come from one poker-bitvaljs `compareRangeHands` call: exact on the flop, turn and river
+  (a few ms), Monte Carlo preflop and on 1-2 card boards
+- Pass `preflopTableUrl` for exact, near-instant preflop equity (the table is ~1.1 MB, fetched once):
+
+```svelte
+<script>
+  import PokerGridPanel from 'poker-irongrid';
+  import preflopTableUrl from 'poker-bitvaljs/bench/preflop-table.bin?url'; // Vite
+</script>
+
+<PokerGridPanel evaluator={true} {preflopTableUrl} />
+```
 
 ### Responsive Design
 

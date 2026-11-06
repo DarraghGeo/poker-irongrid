@@ -1,17 +1,13 @@
 <script>
   /** SelectionSummary: display counts for highlighted and selected combos. */
-  import BitValModule from 'poker-bitvaljs';
-
-  // Handle CommonJS export
-  const BitVal = BitValModule?.default || BitValModule;
-
   export let highlighted = 0;
   export let selected = 0;
   export let evaluator = false;
   export let heroCards = [];
-  export let boardCards = [];
-  export let deadCards = [];
-  export let hands = {};
+  /** Live equity from PokerGridPanel: { hero, villain, combos, byColor } or null. */
+  export let equity = null;
+  /** True while a newer equity result is being calculated. */
+  export let equityPending = false;
   export let visibleHands = {};
   export let manager = null; // PokerGridManager instance
 
@@ -49,142 +45,9 @@
     await copyToClipboard(selectedHands);
   }
 
-  /** Evaluation state */
-  let evaluationResults = null;
-  let isEvaluating = false;
-  let evaluationProgress = 0;
-  let evaluationKey = 0;
-  let lastEvaluationKey = '';
-
-  /** Reset results when inputs change */
-  $: {
-    if (evaluator && (heroCards?.length !== 2 || !hasHandsOnGrid)) {
-      evaluationResults = null;
-    }
-    const newKey = JSON.stringify({ heroCards, boardCards, deadCards, visibleHands });
-    if (newKey !== lastEvaluationKey) {
-      evaluationResults = null;
-      lastEvaluationKey = newKey;
-    }
-    evaluationKey = newKey;
-  }
-
-  /** Check if there are hands on the grid to evaluate against */
-  $: hasHandsOnGrid = visibleHands && Object.keys(visibleHands).length > 0;
-  
-  /** Check if button should be enabled */
-  $: isButtonEnabled = evaluator && heroCards?.length === 2 && hasHandsOnGrid && !isEvaluating;
-  
-  /** Check if button should be visible (always show when evaluator is true, even if disabled) */
-  $: showButton = evaluator;
-
-  /** Run equity evaluation */
-  async function runEvaluation() {
-    if (!isButtonEnabled) return;
-    
-    isEvaluating = true;
-    evaluationResults = null;
-    evaluationProgress = 0;
-
-    try {
-      // Get villain hands from visibleHands (already filtered for dead cards)
-      // Only hands that are highlighted (have colors) or selected
-      // A hand is highlighted if its value array contains an HSL color string
-      const hasExplicitColor = (values) => manager ? manager.hasExplicitColor(values) : false;
-      const isSelected = (values) => manager ? manager.isSelected(values) : false;
-      const villainHands = Object.entries(visibleHands || {})
-        .filter(([hand, values]) => 
-          hand && hand.length === 4 && // Valid hand format (e.g., 'AcKd')
-          (hasExplicitColor(values) || isSelected(values)) // Has color or is selected
-        )
-        .map(([hand]) => hand);
-      
-      if (villainHands.length === 0) {
-        isEvaluating = false;
-        evaluationProgress = 0;
-        return;
-      }
-
-      // Create hero hands array (single hand)
-      const heroHand = heroCards[0] + heroCards[1];
-      const heroHands = [heroHand];
-
-      // Initialize BitVal
-      const bitval = new BitVal();
-
-      // numberOfBoardCards should always be 5 (total board cards to be dealt)
-      // For preflop, boardCards is empty but numberOfBoardCards is still 5
-      // For postflop, boardCards has known cards and numberOfBoardCards is 5
-      const numberOfBoardCards = 5;
-      
-      // Dead cards for bitval: hero cards + dead cards from input (exclude board cards)
-      // Hero cards MUST be included so they don't get dealt to villain
-      // Board cards are excluded because bitval adds them internally
-      const deadCardsFromInput = (deadCards || []).filter(card => 
-        !(heroCards || []).includes(card) && !(boardCards || []).includes(card)
-      );
-      const deadCardsForBitval = [...heroCards, ...deadCardsFromInput];
-      
-      // Disable optimize mode when 3 or more board cards are present (flop, turn, river)
-      // Optimize mode uses canonical caching which can introduce ±0.5% margin of error
-      // For 0, 1, or 2 board cards, use optimization for speed
-      // For 3+ board cards, accuracy is more important
-      const boardCardsCount = (boardCards || []).length;
-      const optimize = boardCardsCount < 3;
-      
-      // Progress callback to update progress percentage
-      const progressCallback = (current, total, message) => {
-        const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
-        evaluationProgress = percentage;
-      };
-      
-      // Prepare exact parameters for bitval.compareRange
-      const bitvalParams = {
-        heroHands,
-        villainHands,
-        boardCards: boardCards || [],
-        deadCards: deadCardsForBitval,
-        numberOfBoardCards,
-        iterations: 10000,
-        optimize,
-        progressCallback
-      };
-      
-      // Run evaluation
-      const result = await bitval.compareRange(
-        bitvalParams.heroHands,
-        bitvalParams.villainHands,
-        bitvalParams.boardCards,
-        bitvalParams.deadCards,
-        bitvalParams.numberOfBoardCards,
-        bitvalParams.iterations,
-        bitvalParams.optimize,
-        bitvalParams.progressCallback
-      );
-
-      // Calculate equity
-      const total = result.win + result.tie + result.lose;
-      const heroEquity = total > 0 ? ((result.win + result.tie / 2) / total) * 100 : 0;
-      const villainEquity = 100 - heroEquity;
-
-      evaluationResults = {
-        heroEquity: heroEquity,
-        villainEquity: villainEquity
-      };
-      evaluationProgress = 100;
-    } catch (error) {
-      evaluationResults = null;
-      evaluationProgress = 0;
-    } finally {
-      isEvaluating = false;
-      // Reset progress after a brief delay to show 100%
-      setTimeout(() => {
-        if (!isEvaluating) {
-          evaluationProgress = 0;
-        }
-      }, 500);
-    }
-  }
+  /** Equity display: the panel recalculates it live whenever the inputs change. */
+  $: showEquity = evaluator && heroCards?.length === 2;
+  $: hasEquity = equity && equity.hero !== null && equity.hero !== undefined;
 </script>
 
 <div class="flex items-center justify-between mt-1">
@@ -211,40 +74,32 @@
     </span>
   </span>
   <div class="flex items-center gap-2">
-    {#if evaluator && evaluationResults}
-      <div class="text-xs" style="color: var(--poker-text-secondary);">
-        <span>Hero: {Math.round(evaluationResults.heroEquity)}% vs. Villain: {Math.round(evaluationResults.villainEquity)}%</span>
-      </div>
-    {:else if evaluator && isEvaluating}
-      <div class="text-xs" style="color: var(--poker-text-secondary);">
-        <span>Evaluating: {evaluationProgress}%</span>
-      </div>
-    {:else if showButton}
-      <button
-        type="button"
-        onclick={runEvaluation}
-        disabled={!isButtonEnabled}
-        class="px-2 py-1 text-xs rounded border transition-colors"
-        style="
-          background-color: {isButtonEnabled ? 'var(--irongrid-color-primary)' : 'var(--irongrid-color-bg-disabled)'};
-          color: {isButtonEnabled ? 'var(--irongrid-color-white)' : 'var(--irongrid-color-text-secondary)'};
-          border-color: {isButtonEnabled ? 'var(--irongrid-color-primary)' : 'var(--irongrid-color-bg-disabled)'};
-          cursor: {isButtonEnabled ? 'pointer' : 'not-allowed'};
-          opacity: {isButtonEnabled ? '1' : 'var(--irongrid-opacity-disabled)'};
-        "
-        onmouseover={(e) => {
-          if (isButtonEnabled) e.target.style.opacity = '0.9';
-        }}
-        onmouseout={(e) => {
-          if (isButtonEnabled) e.target.style.opacity = '1';
-        }}
+    {#if showEquity}
+      <div
+        class="text-xs equity-readout"
+        class:equity-pending={equityPending}
+        style="color: var(--irongrid-color-text-secondary);"
+        aria-live="polite"
+        title={hasEquity ? `Hero's equity against ${equity.combos} villain combos (selected or colored)` : ''}
       >
-        Evaluate
-      </button>
+        {#if hasEquity}
+          <span>Hero: {Math.round(equity.hero)}% vs. Villain: {Math.round(equity.villain)}%</span>
+        {:else if equityPending}
+          <span>Calculating…</span>
+        {:else}
+          <span>Select villain hands for equity</span>
+        {/if}
+      </div>
     {/if}
   </div>
 </div>
 
 <style>
+  .equity-readout {
+    transition: opacity 120ms ease;
+  }
+  .equity-pending {
+    opacity: 0.55;
+  }
 </style>
 

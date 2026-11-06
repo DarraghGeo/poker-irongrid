@@ -6,18 +6,17 @@
    */
   import { createEventDispatcher } from 'svelte';
   import { RANKS, SUITS } from '../utils/index.js';
-  import BitValModule from 'poker-bitvaljs';
 
   const dispatch = createEventDispatcher();
-
-  // Handle CommonJS export
-  const BitVal = BitValModule?.default || BitValModule;
 
   export let hands = {};
   export let boardCards = [];
   export let evaluator = false;
   export let heroCards = [];
-  export let deadCards = [];
+  /** Live equity from PokerGridPanel ({ byColor }), or null. */
+  export let equity = null;
+  /** True while a newer equity result is being calculated. */
+  export let equityPending = false;
   export let colors = [
     'hsl(60, 100%, 70%)',
     'hsl(120, 100%, 70%)',
@@ -113,97 +112,16 @@
   $: colorCounts = colorStats.counts;
   $: colorPercentages = colorStats.percentages;
 
-  /** Calculate equity for each color group. */
-  let colorEquities = {};
-  let isCalculatingEquity = false;
-  let calculatingColors = {}; // Track which colors are currently calculating (object for reactivity)
-  let equityCalculationKey = 0;
-  let lastColorHands = {}; // Track previous color hands to detect changes
-
-  /** Track changes to trigger equity recalculation - only when colors change, not selections */
-  $: if (evaluator && colorDisplayMode === 'equity' && heroCards?.length === 2 && manager) {
-    // Only track colored hands, not selected-only hands
-    const currentColorHands = {};
-    colors.forEach(color => {
-      const coloredHands = Object.keys(hands || {}).filter(h => {
-        const handData = hands[h];
-        if (!Array.isArray(handData)) return false;
-        // Only include if hand has this color (not just selected)
-        return handData.some(item => item === color);
-      });
-      currentColorHands[color] = coloredHands.sort();
+  /** Hero's equity against each color's hands, from the panel's live calculation. */
+  $: colorEquities = (() => {
+    const equities = {};
+    colors.forEach(c => {
+      const value = equity?.byColor?.[c];
+      equities[c] = value === null || value === undefined ? null : Math.round(value);
     });
-
-    // Check if any color's hands have changed
-    const hasChanged = colors.some(color => {
-      const current = JSON.stringify(currentColorHands[color] || []);
-      const last = JSON.stringify(lastColorHands[color] || []);
-      return current !== last;
-    });
-
-    // Also check if board/hero/dead cards changed
-    const boardKey = JSON.stringify((boardCards || []).sort());
-    const heroKey = JSON.stringify((heroCards || []).sort());
-    const deadKey = JSON.stringify((deadCards || []).sort());
-    const lastBoardKey = JSON.stringify((lastBoardCards || []).sort());
-    const lastHeroKey = JSON.stringify((lastHeroCards || []).sort());
-    const lastDeadKey = JSON.stringify((lastDeadCards || []).sort());
-
-    if (hasChanged || boardKey !== lastBoardKey || heroKey !== lastHeroKey || deadKey !== lastDeadKey) {
-      lastColorHands = currentColorHands;
-      lastBoardCards = [...(boardCards || [])];
-      lastHeroCards = [...(heroCards || [])];
-      lastDeadCards = [...(deadCards || [])];
-      
-      // Use requestAnimationFrame to ensure UI updates first, then calculate
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          calculateColorEquities();
-        }, 0);
-      });
-    }
-  }
-
-  let lastBoardCards = [];
-  let lastHeroCards = [];
-  let lastDeadCards = [];
-
-  async function calculateColorEquities() {
-    if (isCalculatingEquity || !manager) return;
-    if (!evaluator || colorDisplayMode !== 'equity' || heroCards?.length !== 2) {
-      colorEquities = {};
-      return;
-    }
-
-    isCalculatingEquity = true;
-    const currentKey = ++equityCalculationKey;
-    
-    try {
-      const newEquities = await manager.calculateColorEquities(hands, heroCards, boardCards, deadCards, colors);
-        
-        // Check if calculation was invalidated
-        if (currentKey !== equityCalculationKey) {
-          isCalculatingEquity = false;
-          calculatingColors = {};
-          return;
-        }
-
-        colorEquities = newEquities;
-    } catch (error) {
-      colorEquities = {};
-      colors.forEach(c => colorEquities[c] = 0);
-    } finally {
-      if (currentKey === equityCalculationKey) {
-        isCalculatingEquity = false;
-        calculatingColors = {};
-      }
-    }
-  }
-
-  /** Check if a color is currently calculating equity */
-  function isColorCalculating(color) {
-    return calculatingColors[color] === true;
-  }
+    return equities;
+  })();
+  $: equityLoading = evaluator && colorDisplayMode === 'equity' && heroCards?.length === 2 && equityPending;
 
   /** Toggle color display mode: count -> percentage -> equity -> count */
   function toggleColorDisplayMode() {
@@ -229,7 +147,7 @@
       if (colorDisplayMode === 'percentage') {
         texts[color] = `${colorPercentages[color] || 0}%`;
       } else if (colorDisplayMode === 'equity') {
-        texts[color] = `${colorEquities[color] || 0}%`;
+        texts[color] = colorEquities[color] === null ? '–' : `${colorEquities[color]}%`;
       } else {
         texts[color] = colorCounts[color] || 0;
       }
@@ -264,7 +182,7 @@
       </button>
       {#each colors as color}
         <button
-            class="px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0 whitespace-nowrap relative {calculatingColors[color] ? 'pulsing' : ''}"
+            class="px-2 py-1 rounded border border-gray-300 hover:border-gray-400 transition-colors flex-shrink-0 whitespace-nowrap relative {equityLoading && colorCounts[color] ? 'pulsing' : ''}"
           style="--button-color: {color}; background-color: var(--button-color);"
           onclick={(e) => handleColorClick(color, e)}
           title="Apply color to selected hands"

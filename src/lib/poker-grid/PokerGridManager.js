@@ -11,6 +11,50 @@ import { SUITS } from './utils/constants.js';
 // Handle CommonJS export
 const BitVal = BitValModule?.default || BitValModule;
 
+/** One shared evaluator: poker-bitvaljs keeps its Web Workers between calls. */
+let sharedBitVal = null;
+function getBitVal() {
+  if (!sharedBitVal) {
+    sharedBitVal = new BitVal();
+    // Monte Carlo spots (preflop, 1-2 card boards) sample boards once for every hand: much faster
+    sharedBitVal.mcSharedBoards = true;
+  }
+  return sharedBitVal;
+}
+
+let preflopTableLoad = null;
+/**
+ * Loads poker-bitvaljs's preflop table (bench/preflop-table.bin, ~1.1 MB) once, for exact, near-instant
+ * preflop equity; without it preflop equity is a Monte Carlo estimate (within about ±0.3%).
+ * @param {string} url - Where the app serves the table
+ * @returns {Promise<boolean>} Whether the table loaded
+ */
+export function loadPreflopTable(url) {
+  if (!url) return Promise.resolve(false);
+  preflopTableLoad ||= fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      getBitVal().loadPreflopTable(buffer);
+      return true;
+    })
+    .catch(error => {
+      console.warn('poker-irongrid: preflop table not loaded, using Monte Carlo preflop equity', error);
+      return false;
+    });
+  return preflopTableLoad;
+}
+
+/** Order-independent key for a two-card combo ('AcKd' and 'KdAc' match). */
+const comboKey = (combo) => {
+  const a = combo.substring(0, 2);
+  const b = combo.substring(2, 4);
+  return a < b ? a + b : b + a;
+};
+const isCombo = (hand) => typeof hand === 'string' && hand.length === 4;
+
 // Criteria mappings for RangeManager.hitsHand()
 const strengthCriteriaMap = {
   'onePair': ['Pair'],
@@ -278,9 +322,13 @@ export class PokerGridManager {
    * @returns {Object} Matching hands object
    */
   rangeManagerToMatching(rmResult, hands = this.hands) {
+    // Match by both cards, whatever order poker-rangeman lists them in
+    const keyed = new Map();
+    Object.keys(hands || {}).forEach(h => { if (isCombo(h)) keyed.set(comboKey(h), h); });
     const matching = {};
     rmResult.toArray().forEach(hand => {
-      if (hands[hand]) matching[hand] = hands[hand];
+      const original = keyed.get(comboKey(hand));
+      if (original) matching[original] = hands[original];
     });
     return matching;
   }
@@ -309,6 +357,25 @@ export class PokerGridManager {
   }
 
   /**
+   * Keep the combos of a hands object that pass a test.
+   * @param {Object} hands - Hands object
+   * @param {(c1: string, c2: string) => boolean} test - Gets the two cards of each combo
+   * @param {string[]} deadCards - Combos holding these cards are left out
+   * @returns {Object} Matching hands
+   */
+  filterCombos(hands, test, deadCards = []) {
+    const matching = {};
+    Object.keys(hands || {}).forEach(h => {
+      if (!isCombo(h)) return;
+      const c1 = h.substring(0, 2);
+      const c2 = h.substring(2, 4);
+      if (deadCards.includes(c1) || deadCards.includes(c2)) return;
+      if (test(c1, c2)) matching[h] = hands[h];
+    });
+    return matching;
+  }
+
+  /**
    * Get hands matching a rank.
    * @param {string} rank - Rank (A, K, Q, etc.)
    * @param {Object} hands - Hands object
@@ -316,20 +383,11 @@ export class PokerGridManager {
    * @returns {Object} Matching hands
    */
   getHandsByRank(rank, hands = this.hands, deadCards = []) {
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const rankRange = `${rank}Xs,${rank}Xo`;
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      const matched = currentRm.intersect(rankRange);
-      return this.rangeManagerToMatching(matched, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[0] === rank || c2[0] === rank, deadCards);
   }
 
   /**
-   * Get hands matching a suit.
+   * Get hands holding at least one card of a suit.
    * @param {string} suitName - Suit name (clubs, diamonds, hearts, spades)
    * @param {Object} hands - Hands object
    * @param {string[]} deadCards - Dead cards to exclude
@@ -338,15 +396,7 @@ export class PokerGridManager {
   getHandsBySuit(suitName, hands = this.hands, deadCards = []) {
     const suitCode = SUITS.find(s => s.name === suitName)?.code;
     if (!suitCode) return {};
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      const matched = currentRm.hasSuit(suitCode);
-      return this.rangeManagerToMatching(matched, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[1] === suitCode || c2[1] === suitCode, deadCards);
   }
 
   /**
@@ -359,15 +409,7 @@ export class PokerGridManager {
   getHandsByDoubleSuit(suitName, hands = this.hands, deadCards = []) {
     const suitCode = SUITS.find(s => s.name === suitName)?.code;
     if (!suitCode) return {};
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      const matched = currentRm.suitedOf(suitCode);
-      return this.rangeManagerToMatching(matched, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[1] === suitCode && c2[1] === suitCode, deadCards);
   }
 
   /**
@@ -377,15 +419,7 @@ export class PokerGridManager {
    * @returns {Object} Matching hands
    */
   getPairedHands(hands = this.hands, deadCards = []) {
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      const matched = currentRm.intersect('22+');
-      return this.rangeManagerToMatching(matched, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[0] === c2[0], deadCards);
   }
 
   /**
@@ -395,46 +429,17 @@ export class PokerGridManager {
    * @returns {Object} Matching hands
    */
   getSuitedHands(hands = this.hands, deadCards = []) {
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      // Use method chaining to combine all suited hands
-      let allSuited = new RangeManager([]);
-      ['c', 'd', 'h', 's'].forEach(suit => {
-        allSuited = allSuited.include(currentRm.suitedOf(suit));
-      });
-      return this.rangeManagerToMatching(allSuited, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[1] === c2[1], deadCards);
   }
 
   /**
-   * Get offsuit hands.
+   * Get offsuit hands (different suits; includes pocket pairs).
    * @param {Object} hands - Hands object
    * @param {string[]} deadCards - Dead cards to exclude
    * @returns {Object} Matching hands
    */
   getOffsuitHands(hands = this.hands, deadCards = []) {
-    const allHands = Object.keys(hands);
-    if (allHands.length === 0) return {};
-    try {
-      const currentRm = this.getHandsRangeManager(hands, deadCards);
-      // Use method chaining to combine all offsuit hands
-      // For offsuit: get hands that have the suit but exclude suited hands
-      let allOffsuit = new RangeManager([]);
-      ['c', 'd', 'h', 's'].forEach(suit => {
-        // Get hands that have this suit, then exclude suited hands
-        const hasSuit = currentRm.hasSuit(suit);
-        const suited = currentRm.suitedOf(suit);
-        const offsuit = hasSuit.exclude(suited);
-        allOffsuit = allOffsuit.include(offsuit);
-      });
-      return this.rangeManagerToMatching(allOffsuit, hands);
-    } catch (error) {
-      return {};
-    }
+    return this.filterCombos(hands, (c1, c2) => c1[1] !== c2[1], deadCards);
   }
 
   /**
@@ -485,6 +490,24 @@ export class PokerGridManager {
    */
   getHandStrengthType(hand, boardCards = this.boardCards) {
     if (!boardCards || boardCards.length < 3) return null;
+    const boardKey = boardCards.join('');
+    if (this.strengthCacheBoard !== boardKey) {
+      this.strengthCacheBoard = boardKey;
+      this.strengthCache = new Map();
+    }
+    if (this.strengthCache.has(hand)) return this.strengthCache.get(hand);
+    const type = this.computeHandStrengthType(hand, boardCards);
+    this.strengthCache.set(hand, type);
+    return type;
+  }
+
+  /**
+   * Uncached hand strength type (see getHandStrengthType).
+   * @param {string} hand - Hand code
+   * @param {string[]} boardCards - Board cards
+   * @returns {string|null} Hand strength type
+   */
+  computeHandStrengthType(hand, boardCards) {
     try {
       const handCard1 = hand.substring(0, 2);
       const handCard2 = hand.substring(2, 4);
@@ -506,7 +529,6 @@ export class PokerGridManager {
       if (evalObj.isHighCard) return 'highCard';
       return null;
     } catch (error) {
-      return null;
       return null;
     }
   }
@@ -630,83 +652,79 @@ export class PokerGridManager {
   }
 
   /**
-   * Calculate color equities.
+   * Hero's equity against the villain hands on the grid, overall and per color, from one
+   * poker-bitvaljs compareRangeHands call (each villain combo's result against hero's hand).
+   * Villain hands are the combos that are selected or colored; hands holding a dead, board or
+   * hero card are left out.
    * @param {Object} hands - Hands object
-   * @param {string[]} heroCards - Hero cards
-   * @param {string[]} boardCards - Board cards
-   * @param {string[]} deadCards - Dead cards
+   * @param {string[]} heroCards - Hero cards (two)
+   * @param {string[]} boardCards - Board cards (0-5)
+   * @param {string[]} deadCards - Dead cards (may include hero and board cards)
    * @param {string[]} colors - Colors array
+   * @returns {Promise<{hero: number|null, villain: number|null, combos: number, byColor: Object}|null>}
+   *   Equities in percent (null when hero meets no villain combo); null without two hero cards.
+   */
+  async calculateEquity(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors) {
+    if (heroCards?.length !== 2) return null;
+    const board = boardCards || [];
+    const otherDead = (deadCards || []).filter(card => !heroCards.includes(card) && !board.includes(card));
+    const blocked = new Set([...heroCards, ...board, ...otherDead]);
+
+    const villainHands = Object.keys(hands || {}).filter(h =>
+      isCombo(h) &&
+      (this.hasExplicitColor(hands[h]) || this.isSelected(hands[h])) &&
+      !blocked.has(h.substring(0, 2)) && !blocked.has(h.substring(2, 4))
+    );
+
+    const byColor = {};
+    (colors || []).forEach(c => { byColor[c] = null; });
+    if (villainHands.length === 0) return { hero: null, villain: null, combos: 0, byColor };
+
+    // Preflop, wait for the table if one is loading (otherwise the result would be Monte Carlo)
+    if (board.length === 0 && preflopTableLoad) await preflopTableLoad;
+
+    // compareRangeHands(hero, villain, board, dead, numberOfBoardCards, iterations, optimize,
+    // progressCallback, progressInterval, useWorkers): exact on the flop/turn/river, Monte Carlo otherwise
+    const result = await getBitVal().compareRangeHands(
+      [heroCards[0] + heroCards[1]], villainHands, board, otherDead, 5, 20000, true, null, 100, true
+    );
+
+    // Villain rows are each villain combo's own win/tie/lose against hero
+    const rowOf = new Map();
+    result.villain.hands.forEach((h, i) => rowOf.set(comboKey(h), i));
+    const heroEquityAgainst = (combos) => {
+      let heroShare = 0;
+      let total = 0;
+      combos.forEach(h => {
+        const i = rowOf.get(comboKey(h));
+        if (i === undefined) return;
+        const win = result.villain.win[i];
+        const tie = result.villain.tie[i];
+        const lose = result.villain.lose[i];
+        heroShare += lose + tie / 2;
+        total += win + tie + lose;
+      });
+      return total > 0 ? (heroShare / total) * 100 : null;
+    };
+
+    const hero = heroEquityAgainst(villainHands);
+    (colors || []).forEach(color => {
+      const colorHands = villainHands.filter(h => hands[h].includes(color));
+      byColor[color] = colorHands.length > 0 ? heroEquityAgainst(colorHands) : null;
+    });
+
+    return { hero, villain: hero === null ? null : 100 - hero, combos: villainHands.length, byColor };
+  }
+
+  /**
+   * Hero's equity against each color's hands, rounded (0 when a color has no hands).
    * @returns {Promise<Object>} Color equities object
    */
   async calculateColorEquities(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors) {
-    if (heroCards?.length !== 2) {
-      return {};
-    }
-
-    try {
-      const coloredHands = Object.keys(hands).filter(h => 
-        Array.isArray(hands[h]) && hands[h].some(item => typeof item === 'string' && item.startsWith('hsl('))
-      );
-
-      if (coloredHands.length === 0) {
-        const equities = {};
-        colors.forEach(c => equities[c] = 0);
-        return equities;
-      }
-
-      const bitval = new BitVal();
-      const heroHand = heroCards[0] + heroCards[1];
-      const heroHands = [heroHand];
-      const numberOfBoardCards = 5;
-      
-      const deadCardsFromInput = (deadCards || []).filter(card => 
-        !(heroCards || []).includes(card) && !(boardCards || []).includes(card)
-      );
-      const deadCardsForBitval = [...heroCards, ...deadCardsFromInput];
-      
-      const boardCardsCount = (boardCards || []).length;
-      const optimize = boardCardsCount < 3;
-
-      const equities = {};
-      
-      for (let i = 0; i < colors.length; i++) {
-        const color = colors[i];
-        
-        const colorHands = coloredHands.filter(h => 
-          hands[h].some(item => item === color)
-        );
-
-        if (colorHands.length === 0) {
-          equities[color] = 0;
-          continue;
-        }
-
-        try {
-          const result = await bitval.compareRange(
-            heroHands,
-            colorHands,
-            boardCards || [],
-            deadCardsForBitval,
-            numberOfBoardCards,
-            10000,
-            optimize,
-            null
-          );
-
-          const total = result.win + result.tie + result.lose;
-          const heroEquity = total > 0 ? ((result.win + result.tie / 2) / total) * 100 : 0;
-          equities[color] = Math.round(heroEquity);
-        } catch (error) {
-          return;
-          equities[color] = 0;
-        }
-      }
-      
-      return equities;
-    } catch (error) {
-      return;
-      return {};
-    }
+    const equity = await this.calculateEquity(hands, heroCards, boardCards, deadCards, colors);
+    const equities = {};
+    (colors || []).forEach(c => { equities[c] = Math.round(equity?.byColor?.[c] ?? 0); });
+    return equities;
   }
 
   // ==================== Range Methods ====================
@@ -1037,47 +1055,24 @@ export class PokerGridManager {
     if (activeHands.length === 0) return false;
     
     try {
-      const activeRm = new RangeManager(activeHands);
-      
+      const active = {};
+      activeHands.forEach(h => { active[h] = hands[h]; });
+      const allMatch = (matching) => Object.keys(matching).length === activeHands.length;
+
       switch (filterType) {
         case 'rank':
-          // Use standard notation: KK,K2s+,K2o+ to check all hands with this rank
-          const rankRange = `${filterValue}${filterValue},${filterValue}2s+,${filterValue}2o+`;
-          return activeRm.intersect(rankRange).size() === activeHands.length;
-        
+          return allMatch(this.getHandsByRank(filterValue, active));
         case 'suit':
-          const suitCode = SUITS.find(s => s.name === filterValue)?.code;
-          if (!suitCode) return false;
-          return activeRm.hasSuit(suitCode).size() === activeHands.length;
-        
+          return allMatch(this.getHandsBySuit(filterValue, active));
         case 'doubleSuit':
-          const doubleSuitCode = SUITS.find(s => s.name === filterValue)?.code;
-          if (!doubleSuitCode) return false;
-          return activeRm.suitedOf(doubleSuitCode).size() === activeHands.length;
-        
+          return allMatch(this.getHandsByDoubleSuit(filterValue, active));
         case 'paired':
-          return activeRm.intersect('22+').size() === activeHands.length;
-        
+          return allMatch(this.getPairedHands(active));
         case 'suited':
-          // Check if all active hands are suited in at least one suit
-          return ['c', 'd', 'h', 's'].some(suit => 
-            activeRm.suitedOf(suit).size() === activeHands.length
-          );
-        
+          return allMatch(this.getSuitedHands(active));
         case 'unsuited':
-          // Check if all active hands are offsuit (have different suits)
-          // For offsuit: get hands that have a suit but exclude suited hands
-          return ['c', 'd', 'h', 's'].some(suit => {
-            try {
-              const hasSuit = activeRm.hasSuit(suit);
-              const suited = activeRm.suitedOf(suit);
-              const offsuit = hasSuit.exclude(suited);
-              return offsuit.size() === activeHands.length;
-            } catch (error) {
-              return false;
-            }
-          });
-        
+          return allMatch(this.getOffsuitHands(active));
+
         case 'colored':
           return activeHands.every(h => 
             Array.isArray(hands[h]) && hands[h].some(item => typeof item === 'string' && item.startsWith('hsl('))
@@ -1122,7 +1117,6 @@ export class PokerGridManager {
           return false;
       }
     } catch (error) {
-      return false;
       return false;
     }
   }

@@ -1,5 +1,6 @@
 <script>
   import PokerGridPanel from '$lib/poker-grid/index.js';
+  import preflopTableUrl from 'poker-bitvaljs/bench/preflop-table.bin?url';
   
   // Example ranges - you can customize these
   const ranges = [
@@ -77,6 +78,7 @@
         showSummary={true}
         interactive={true}
         evaluator={true}
+        {preflopTableUrl}
         on:selectionChange={handleSelectionChange}
         on:rangeSelected={handleRangeSelected}
         on:deadCardsChange={handleDeadCardsChange}

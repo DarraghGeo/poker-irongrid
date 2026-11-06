@@ -6,8 +6,8 @@
    * Purpose: Orchestrates the full poker grid experience (dead inputs, range select, grid, controls, summary)
    * with configurable visibility and two-way bindings for raw and visible hands.
    */
-  import { createEventDispatcher } from 'svelte';
-  import { PokerGridManager } from '../PokerGridManager.js';
+  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { PokerGridManager, loadPreflopTable } from '../PokerGridManager.js';
   import BaseGrid from './Grid.svelte';
   import HandSelector from './HandSelector.svelte';
   import SelectionSummary from './SelectionSummary.svelte';
@@ -29,6 +29,13 @@
   export let defaultColor = 'hsl(0, 0%, 100%)';
   export let defaultSelectedColor = 'hsl(0, 0%, 85%)';
   export let colors = [];
+  /**
+   * Optional URL of poker-bitvaljs's preflop table (bench/preflop-table.bin) for exact preflop equity,
+   * e.g. with Vite: import preflopTableUrl from 'poker-bitvaljs/bench/preflop-table.bin?url'.
+   * Without it, preflop equity is a Monte Carlo estimate.
+   */
+  export let preflopTableUrl = null;
+  $: if (evaluator && preflopTableUrl) loadPreflopTable(preflopTableUrl);
   /** Predefined ranges for range selection. Array of {name: string, abbreviation: string} */
   export let ranges = [];
 
@@ -92,6 +99,48 @@
 
   /** Derive visible hands (filtered by dead cards). */
   $: visibleHands = manager.filterByDeadCards(internalHands, deadCards);
+
+  /**
+   * Live equity (evaluator mode): recalculated, asynchronously, whenever the hero cards, board,
+   * dead cards or the hands on the grid change. Results that arrive after a newer request are dropped.
+   */
+  let equity = null;
+  let equityPending = false;
+  let equityRequest = 0;
+  let equityTimer = null;
+  let lastEquityKey = '';
+
+  $: equityKey = evaluator
+    ? JSON.stringify({ heroCards, boardCards, deadCards, hands: visibleHands, colors })
+    : '';
+  $: if (equityKey !== lastEquityKey) {
+    lastEquityKey = equityKey;
+    scheduleEquity();
+  }
+
+  function scheduleEquity() {
+    clearTimeout(equityTimer);
+    const request = ++equityRequest;
+    if (!evaluator || heroCards?.length !== 2) {
+      equity = null;
+      equityPending = false;
+      return;
+    }
+    equityPending = true;
+    // A short debounce coalesces bursts (typing cards, dragging across the grid)
+    equityTimer = setTimeout(async () => {
+      try {
+        const result = await manager.calculateEquity(visibleHands, heroCards, boardCards, deadCards, colors);
+        if (request === equityRequest) equity = result;
+      } catch (error) {
+        if (request === equityRequest) equity = null;
+      } finally {
+        if (request === equityRequest) equityPending = false;
+      }
+    }, 50);
+  }
+
+  onDestroy(() => clearTimeout(equityTimer));
 
   /** Highlighted and selected counts for summary. */
   $: highlightedCount = Object.values(visibleHands || {}).filter(v => manager.hasExplicitColor(v)).length;
@@ -228,9 +277,8 @@
       selected={selectedCount}
       {evaluator}
       {heroCards}
-      {boardCards}
-      {deadCards}
-      {hands}
+      {equity}
+      {equityPending}
       {visibleHands}
       {manager}
     />
@@ -256,8 +304,9 @@
       {boardCards}
       {evaluator}
       {heroCards}
-      {deadCards}
       {colors}
+      {equity}
+      {equityPending}
       {manager}
       on:selectionChange={handleSelectionChange}
       on:clearAll={() => {

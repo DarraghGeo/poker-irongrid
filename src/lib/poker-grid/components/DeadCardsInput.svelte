@@ -109,10 +109,10 @@
       else if (type === 'board') board = formatted;
       else if (type === 'dead') dead = formatted;
       
-      requestAnimationFrame(() => {
-        const newPos = Math.max(0, Math.min(cursorPos + diff, formatted.length));
-        input.setSelectionRange(newPos, newPos);
-      });
+      // Restore the caret right away: deferring it (e.g. to the next frame) moves it back
+      // after any keys typed in between, so fast typing landed in the wrong place
+      const newPos = Math.max(0, Math.min(cursorPos + diff, formatted.length));
+      input.setSelectionRange(newPos, newPos);
     } else {
       if (type === 'hero') hero = rawValue;
       else if (type === 'board') board = rawValue;
