@@ -217,6 +217,21 @@ The component includes comprehensive filtering options:
 - Visual distinction between colored and uncolored hands
 - Color statistics display
 
+### Design (2.0)
+
+- **Grid:** small tiles with rounded corners and 2px gaps (`--irongrid-cell-gap`, `--irongrid-cell-radius`),
+  two-character labels (AK above the diagonal is suited, below is offsuit). Hands in the range are filled with
+  their color (lighter when only some combos are in); hands outside it get a faint suited / offsuit / pair tint
+  (`--irongrid-cell-suited-bg`, `--irongrid-cell-offsuit-bg`, `--irongrid-cell-paired-bg`) and grey text.
+  Selected colored hands get a ring (`--irongrid-cell-ring-color`). With `subgrid`, the 3x3 blocks are set apart.
+- **Loading a range** (range select) fills a fresh grid with the first color; nothing is selected.
+- **Controls** (`showControls`): color chips showing each color's share of the range (%), combos (#) or hero's
+  equity (Eq), and × to clear; the share selected with All / Invert; a **Made × Draw** table (made hand by draw:
+  none, straight, flush, combo, backdoor flush) or **Made × Equity** (hero's equity against the hands, in 20%
+  bands); rank filters; and a suit matrix with Suited / Offsuit. Draws must use a hole card (poker-extval with
+  `holeCards`). Clicking any table, rank or suit cell selects its hands (ctrl/cmd adds, shift removes); a color
+  chip then colors the selection.
+
 ### Equity Evaluation
 
 When `evaluator={true}`, hero's equity is calculated live (asynchronously) whenever the hero cards,

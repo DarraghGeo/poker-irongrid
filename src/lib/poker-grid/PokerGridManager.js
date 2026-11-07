@@ -617,6 +617,112 @@ export class PokerGridManager {
     return this.rangeManagerToMatching(drawOnlyRm, hands);
   }
 
+  // ==================== Range Views (design) ====================
+
+  /** The color of a hand's values (its hsl entry), or null. */
+  colorOf(values) {
+    return (values || []).find(item => typeof item === 'string' && item.startsWith('hsl(')) || null;
+  }
+
+  /**
+   * Combos in the range: those with a color or selected (dead combos are expected to be filtered out already).
+   * @param {Object} hands - Hands object (visible hands)
+   * @returns {string[]}
+   */
+  getRangeCombos(hands = this.hands) {
+    return Object.keys(hands || {}).filter(h => isCombo(h) && (this.hasExplicitColor(hands[h]) || this.isSelected(hands[h])));
+  }
+
+  /**
+   * Select combos with the usual modifiers: plain replaces the selection, ctrl/cmd adds, shift removes.
+   * @param {Object} hands - Hands object
+   * @param {string[]} combos - Combos to select
+   * @param {{ctrl?: boolean, shift?: boolean}} modifiers
+   * @returns {Object} Updated hands object
+   */
+  selectCombos(hands, combos, modifiers = {}) {
+    const newHands = modifiers.ctrl || modifiers.shift ? { ...hands } : this.unselectAll(hands);
+    combos.forEach(h => {
+      const values = (newHands[h] || []).filter(item => item !== 'selected');
+      newHands[h] = modifiers.shift ? values : [...values, 'selected'];
+    });
+    return newHands;
+  }
+
+  /**
+   * Invert the selection within the range.
+   * @param {Object} hands - Hands object
+   * @returns {Object} Updated hands object
+   */
+  invertRangeSelection(hands) {
+    const newHands = { ...hands };
+    this.getRangeCombos(hands).forEach(h => {
+      const values = newHands[h] || [];
+      newHands[h] = values.includes('selected') ? values.filter(item => item !== 'selected') : [...values, 'selected'];
+    });
+    return newHands;
+  }
+
+  /**
+   * Classify combos on a board for the Made x Draw table: made hand (row) and draw (column), from
+   * poker-extval with the hole cards, so draws must use a hole card. Cached per board.
+   * Made: highCard, onePair, twoPair, trips, straight, flush, fullHouse, quads, straightFlush.
+   * Draw (flop/turn only): combo (flush + straight draw), flush, straight, backdoor (backdoor flush draw,
+   * flop only), none.
+   * @param {string[]} combos - Combos
+   * @param {string[]} boardCards - Board (3-5 cards)
+   * @returns {Map<string, {made: string, draw: string}>}
+   */
+  classifyCombos(combos, boardCards = this.boardCards) {
+    const result = new Map();
+    if (!boardCards || boardCards.length < 3) return result;
+    const key = boardCards.join('');
+    if (this.classifyCacheBoard !== key) {
+      this.classifyCacheBoard = key;
+      this.classifyCache = new Map();
+    }
+    combos.forEach(h => {
+      if (!this.classifyCache.has(h)) {
+        this.classifyCache.set(h, this.classifyCombo(h, boardCards));
+      }
+      const value = this.classifyCache.get(h);
+      if (value) result.set(h, value);
+    });
+    return result;
+  }
+
+  /** Uncached classifyCombos for one combo, or null if the cards clash. */
+  classifyCombo(combo, boardCards) {
+    const hole = [combo.substring(0, 2), combo.substring(2, 4)];
+    if (hole.some(card => boardCards.includes(card))) return null;
+    try {
+      const evaluation = Object.values(evaluateHand([...boardCards, ...hole], { holeCards: hole }))[0];
+      if (!evaluation) return null;
+      let made = 'highCard';
+      if (evaluation.isStraightFlush || evaluation.isRoyalFlush) made = 'straightFlush';
+      else if (evaluation.isFourOfAKind) made = 'quads';
+      else if (evaluation.isFullHouse) made = 'fullHouse';
+      else if (evaluation.isFlush) made = 'flush';
+      else if (evaluation.isStraight) made = 'straight';
+      else if (evaluation.isThreeOfAKind) made = 'trips';
+      else if (evaluation.isTwoPair) made = 'twoPair';
+      else if (evaluation.isPair) made = 'onePair';
+
+      let draw = 'none';
+      if (boardCards.length < 5) {
+        const flushDraw = !!evaluation.isFlushDraw;
+        const straightDraw = !!evaluation.isStraightDraw;
+        if (flushDraw && straightDraw) draw = 'combo';
+        else if (flushDraw) draw = 'flush';
+        else if (straightDraw) draw = 'straight';
+        else if (boardCards.length === 3 && evaluation.isBackdoorFlushDraw) draw = 'backdoor';
+      }
+      return { made, draw };
+    } catch (error) {
+      return null;
+    }
+  }
+
   // ==================== Color Methods ====================
 
   /**
@@ -654,32 +760,26 @@ export class PokerGridManager {
   /**
    * Hero's equity against the villain hands on the grid, overall and per color, from one
    * poker-bitvaljs compareRangeHands call (each villain combo's result against hero's hand).
-   * Villain hands are the combos that are selected or colored by hand (colors in `autoColors`, set by
-   * applyEquityBands, don't count); hands holding a dead, board or hero card are left out.
+   * Villain hands are the combos in the range (colored or selected); hands holding a dead, board or hero
+   * card are left out.
    * @param {Object} hands - Hands object
    * @param {string[]} heroCards - Hero cards (two)
    * @param {string[]} boardCards - Board cards (0-5)
    * @param {string[]} deadCards - Dead cards (may include hero and board cards)
    * @param {string[]} colors - Colors array
-   * @param {Map<string, string>|null} autoColors - Colors applyEquityBands set (combo -> color)
    * @returns {Promise<{hero: number|null, villain: number|null, combos: number, byColor: Object, byCombo: Object}|null>}
    *   Equities in percent (null when hero meets no villain combo); byCombo is hero's equity against each
    *   villain combo. Null without two hero cards.
    */
-  async calculateEquity(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors, autoColors = null) {
+  async calculateEquity(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors) {
     if (heroCards?.length !== 2) return null;
     const board = boardCards || [];
     const otherDead = (deadCards || []).filter(card => !heroCards.includes(card) && !board.includes(card));
     const blocked = new Set([...heroCards, ...board, ...otherDead]);
 
-    const colorOf = (h) => (hands[h] || []).find(item => typeof item === 'string' && item.startsWith('hsl('));
-    const coloredByHand = (h) => {
-      const color = colorOf(h);
-      return !!color && !(autoColors && autoColors.get(h) === color);
-    };
     const villainHands = Object.keys(hands || {}).filter(h =>
       isCombo(h) &&
-      (coloredByHand(h) || this.isSelected(hands[h])) &&
+      (this.hasExplicitColor(hands[h]) || this.isSelected(hands[h])) &&
       !blocked.has(h.substring(0, 2)) && !blocked.has(h.substring(2, 4))
     );
 
@@ -729,16 +829,17 @@ export class PokerGridManager {
    * Color villain combos by hero's equity against them: one equal-width band per color, colors[0] for
    * hero's lowest equity (villain's strongest hands) up to the last color for hero's highest. With 6
    * colors the bands are 0-16.7%, 16.7-33.3%, ... 83.3-100%.
-   * Only combos without a color, or still holding the color this method gave them, are recolored, so
-   * hand-applied colors stay. Colors this method set are removed from combos that are no longer in
-   * `byCombo` (deselected, dead, or no equity).
+   * Only combos without a color, still holding the color this method gave them, or holding their base
+   * color (e.g. from loading a range) are recolored, so hand-applied colors stay. Combos this method colored
+   * that are no longer in `byCombo` (dead, or no equity) go back to their base color, or lose the color.
    * @param {Object} hands - Hands object
    * @param {Object} byCombo - Hero's equity (%) against each villain combo, from calculateEquity
    * @param {string[]} colors - Colors, one per band
    * @param {Map<string, string>} autoColors - Colors set by earlier calls (combo -> color)
+   * @param {Map<string, string>} baseColors - Colors combos had before banding (combo -> color)
    * @returns {{hands: Object, autoColors: Map<string, string>, changed: boolean}}
    */
-  applyEquityBands(hands, byCombo, colors, autoColors = new Map()) {
+  applyEquityBands(hands, byCombo, colors, autoColors = new Map(), baseColors = new Map()) {
     const next = new Map();
     const newHands = { ...hands };
     let changed = false;
@@ -754,7 +855,7 @@ export class PokerGridManager {
       Object.entries(byCombo || {}).forEach(([h, equity]) => {
         if (equity === null || equity === undefined || Number.isNaN(equity)) return;
         const current = colorOf(newHands[h]);
-        if (current && autoColors.get(h) !== current) return; // colored by hand
+        if (current && autoColors.get(h) !== current && baseColors.get(h) !== current) return; // colored by hand
         const color = colors[Math.min(colors.length - 1, Math.floor(equity / bandWidth))];
         next.set(h, color);
         if (current !== color) setColor(h, color);
@@ -764,7 +865,7 @@ export class PokerGridManager {
     // Combos that lost their equity color (no longer villain hands, or no equity)
     autoColors.forEach((color, h) => {
       if (next.has(h) || !newHands[h]) return;
-      if (colorOf(newHands[h]) === color) setColor(h, null);
+      if (colorOf(newHands[h]) === color) setColor(h, baseColors.get(h) || null);
     });
 
     return { hands: changed ? newHands : hands, autoColors: next, changed };
@@ -782,6 +883,21 @@ export class PokerGridManager {
   }
 
   // ==================== Range Methods ====================
+
+  /**
+   * Load a predefined range as a fresh grid: every combo gets `color` and nothing is selected.
+   * @param {string} rangeName - Range name
+   * @param {Array} ranges - Ranges array
+   * @param {string} color - Color for the range's combos
+   * @returns {{hands: Object, rangeName: string|null}}
+   */
+  loadRange(rangeName, ranges, color) {
+    const selectedRange = ranges.find(r => r.name === rangeName);
+    if (!selectedRange) return { hands: {}, rangeName: null };
+    const hands = {};
+    new RangeManager(selectedRange.abbreviation).toArray().forEach(h => { hands[h] = [color]; });
+    return { hands, rangeName };
+  }
 
   /**
    * Apply predefined range.
@@ -1087,8 +1203,8 @@ export class PokerGridManager {
         newSelection[h] = (newSelection[h] || []).filter(item => item !== 'selected');
       });
     } else {
-      // Normal: Apply color to selected hands
-      newSelection = this.applyColor(newSelection, color, selectedHands);
+      // Normal: Apply color to selected hands, then clear the selection
+      newSelection = this.unselectAll(this.applyColor(newSelection, color, selectedHands));
     }
     
     return newSelection;

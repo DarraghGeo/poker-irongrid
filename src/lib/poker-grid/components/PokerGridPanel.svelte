@@ -7,6 +7,8 @@
    * with configurable visibility and two-way bindings for raw and visible hands.
    */
   import { createEventDispatcher, onDestroy } from 'svelte';
+  // Theme variables: imported here (not only from index.js) so bundlers that tree-shake re-exports keep them
+  import '../theme.css';
   import { PokerGridManager, loadPreflopTable } from '../PokerGridManager.js';
   import BaseGrid from './Grid.svelte';
   import HandSelector from './HandSelector.svelte';
@@ -127,11 +129,13 @@
 
   /** Colors set by equity banding (combo -> color), so they can be updated or removed later. */
   let autoColors = new Map();
+  /** Colors combos got from loading a range, restored when the equity bands go away. */
+  let baseColors = new Map();
 
   /** Apply (or, with no equity, remove) the equity band colors. */
   function applyEquityColors(byCombo) {
     if (!equityColors && autoColors.size === 0) return;
-    const result = manager.applyEquityBands(internalHands, equityColors ? byCombo || {} : {}, colors, autoColors);
+    const result = manager.applyEquityBands(internalHands, equityColors ? byCombo || {} : {}, colors, autoColors, baseColors);
     autoColors = result.autoColors;
     if (result.changed) {
       internalHands = result.hands;
@@ -156,7 +160,7 @@
     // A short debounce coalesces bursts (typing cards, dragging across the grid)
     equityTimer = setTimeout(async () => {
       try {
-        const result = await manager.calculateEquity(visibleHands, heroCards, boardCards, deadCards, colors, autoColors);
+        const result = await manager.calculateEquity(visibleHands, heroCards, boardCards, deadCards, colors);
         if (request === equityRequest) {
           equity = result;
           applyEquityColors(result?.byCombo);
@@ -180,7 +184,12 @@
    * @param {string} rangeName
    */
   function applyRange(rangeName) {
-    const result = manager.applyRange(rangeName, ranges, internalHands);
+    // A range loads as a fresh grid in the first color (nothing selected); without colors it is selected
+    const result = colors.length > 0
+      ? manager.loadRange(rangeName, ranges, colors[0])
+      : manager.applyRange(rangeName, ranges, internalHands);
+    autoColors = new Map();
+    baseColors = new Map(colors.length > 0 ? Object.keys(result.hands).map(h => [h, colors[0]]) : []);
     selectedRangeName = result.rangeName;
     internalHands = result.hands;
     hands = result.hands;
@@ -301,7 +310,7 @@
       on:cellClick={(e) => dispatch('cellClick', e.detail)}
     />
   </div>
-  {#if showSummary}
+  {#if showSummary && !effectiveShowControls}
     <SelectionSummary 
       highlighted={highlightedCount} 
       selected={selectedCount}
@@ -335,6 +344,7 @@
       {evaluator}
       {heroCards}
       {colors}
+      {defaultSelectedColor}
       {equity}
       {equityPending}
       {manager}
@@ -343,6 +353,7 @@
         internalHands = {};
         hands = {};
         autoColors = new Map();
+        baseColors = new Map();
       }}
     />
   </div>

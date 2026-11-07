@@ -53,7 +53,19 @@
 
   /* Border Variables */
   --irongrid-border-width: 1px;
-  --irongrid-subgrid-gap: 6px; /* space between the 3x3 blocks with subgrid */
+  /* Grid cells */
+  --irongrid-cell-gap: 2px; /* between cells */
+  --irongrid-subgrid-gap: 4px; /* extra space between the 3x3 blocks with subgrid (plus two cell gaps) */
+  --irongrid-cell-radius: 3px;
+  --irongrid-cell-font-size: 0.8125rem;
+  --irongrid-cell-font-size-mobile: 0.6875rem;
+  --irongrid-cell-suited-bg: #eef0f9; /* out-of-range tints */
+  --irongrid-cell-offsuit-bg: #f6f3ee;
+  --irongrid-cell-paired-bg: #f1f2f4;
+  --irongrid-cell-muted-text: #a3a8b3;
+  --irongrid-cell-ring-color: #1f2937; /* selected cells */
+  --irongrid-control-bg: #f3f4f6; /* table heads, segmented control, clear button */
+  --irongrid-control-border: #e5e7eb; /* rank and suit pills, table cells */
   --irongrid-border-radius-sm: 0.125rem;
   --irongrid-border-radius-md: 0.25rem;
   --irongrid-border-radius-lg: 0.375rem;

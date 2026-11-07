@@ -29,20 +29,6 @@
     return index + 1 + (split ? (index >= 5 ? 1 : 0) + (index >= 9 ? 1 : 0) : 0);
   }
 
-  /**
-   * Hairline frame around each 3x3 block (subgrid): inset shadows on the block's edge cells, so cells stay
-   * flush with their neighbours and only the blocks are outlined.
-   */
-  function blockFrame(row, col, split) {
-    if (!split) return '';
-    const shadows = [];
-    if (row === 0 || row === 5 || row === 9) shadows.push(`inset 0 var(--irongrid-border-width) 0 var(--irongrid-color-border)`);
-    if (row === 4 || row === 8 || row === 12) shadows.push(`inset 0 calc(-1 * var(--irongrid-border-width)) 0 var(--irongrid-color-border)`);
-    if (col === 0 || col === 5 || col === 9) shadows.push(`inset var(--irongrid-border-width) 0 0 var(--irongrid-color-border)`);
-    if (col === 4 || col === 8 || col === 12) shadows.push(`inset calc(-1 * var(--irongrid-border-width)) 0 0 var(--irongrid-color-border)`);
-    return shadows.length ? `box-shadow: ${shadows.join(', ')};` : '';
-  }
-
   /** The grid cell under a point (or null), from the cells' own positions, so it works with any spacing. */
   function cellAtPoint(gridElement, x, y) {
     const cells = gridElement.querySelectorAll('[data-row]');
@@ -82,25 +68,52 @@
     return manager ? manager.getCellInfo(rowIndex, colIndex) : { hand: '', display: '', type: '' };
   }
 
-  function getGradient(hand) {
-    return manager ? manager.getGradient(hand, hands, deadCards) : `linear-gradient(to right, ${defaultColor})`;
+  /**
+   * How a cell looks: in range (combos colored or selected), the range color, lighter when only some of the
+   * hand's live combos are in the range; out of range, a faint suited/offsuit/pair tint. Selected colored
+   * combos get a ring.
+   */
+  /** Out-of-range tints (theme variables, with defaults). */
+  const TINTS = {
+    suited: 'var(--irongrid-cell-suited-bg, #eef0f9)',
+    offsuit: 'var(--irongrid-cell-offsuit-bg, #f6f3ee)',
+    paired: 'var(--irongrid-cell-paired-bg, #f1f2f4)'
+  };
+
+  function cellLook(hand, type, handsMap, dead) {
+    const combos = getCombinations(hand);
+    const live = combos.filter(c => !dead.includes(c.substring(0, 2)) && !dead.includes(c.substring(2, 4)));
+    const counts = new Map();
+    let inRange = 0;
+    let selected = 0;
+    let coloredSelected = 0;
+    live.forEach(c => {
+      const values = handsMap[c] || [];
+      const color = manager ? manager.colorOf(values) : null;
+      const isSelected = values.includes('selected');
+      if (!color && !isSelected) return;
+      inRange++;
+      if (isSelected) selected++;
+      if (color && isSelected) coloredSelected++;
+      const key = color || defaultSelectedColor;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    if (live.length === 0) return { background: TINTS[type], inRange: false, dead: true, ring: '' };
+    if (inRange === 0) return { background: TINTS[type], inRange: false, dead: false, ring: '' };
+    let dominant = null;
+    counts.forEach((n, color) => { if (!dominant || n > counts.get(dominant)) dominant = color; });
+    const strength = Math.round(45 + 55 * (inRange / live.length));
+    const ring = coloredSelected === 0 ? '' : selected === inRange ? 'full' : 'partial';
+    return { background: `color-mix(in srgb, ${dominant} ${strength}%, white)`, inRange: true, dead: false, ring };
   }
-  $: handsLength = Object.keys(hands).length;
-  $: handsString = JSON.stringify(hands);
-  $: gradients = (() => {
+
+  $: looks = (() => {
     const result = {};
-    try {
-      const totalKeys = Object.keys(hands || {}).length;
-      const selected = Object.keys(hands || {}).filter(k => Array.isArray(hands[k]) && hands[k].includes('selected')).length;
-      void totalKeys;
-      void selected;
-    } catch (e) {
-      // Ignore gradient recompute errors
-    }
-    ranks.forEach((rowRank, rowIndex) => {
-      ranks.forEach((colRank, colIndex) => {
+    const dead = deadCards || [];
+    ranks.forEach((_, rowIndex) => {
+      ranks.forEach((__, colIndex) => {
         const cellInfo = getCellInfo(rowIndex, colIndex);
-        result[cellInfo.hand] = getGradient(cellInfo.hand);
+        result[cellInfo.hand] = cellLook(cellInfo.hand, cellInfo.type, hands || {}, dead);
       });
     });
     return result;
@@ -445,7 +458,11 @@
           <button
             type="button"
             class="grid-cell {isDragging ? 'dragging' : ''} {interactive ? '' : showTips ? 'non-interactive show-tips' : 'non-interactive'}"
-            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)}; {blockFrame(rowIndex, colIndex, subgrid)}"
+            class:in-range={looks[cellInfo.hand].inRange}
+            class:dead={looks[cellInfo.hand].dead}
+            class:ring-full={looks[cellInfo.hand].ring === 'full'}
+            class:ring-partial={looks[cellInfo.hand].ring === 'partial'}
+            style="background: {looks[cellInfo.hand].background} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
             data-row={rowIndex}
             data-col={colIndex}
             onclick={(e) => handleClick(e, cellInfo)}
@@ -455,18 +472,20 @@
             onkeydown={(e) => handleKeyDown(e, cellInfo)}
             title={cellInfo.display}
           >
-            <span class="cell-text">{cellInfo.display}</span>
+            <span class="cell-text">{cellInfo.hand.substring(0, 2)}</span>
           </button>
         {:else}
           <div
             class="grid-cell non-interactive"
-            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)}; {blockFrame(rowIndex, colIndex, subgrid)}"
+            class:in-range={looks[cellInfo.hand].inRange}
+            class:dead={looks[cellInfo.hand].dead}
+            style="background: {looks[cellInfo.hand].background} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
             data-row={rowIndex}
             data-col={colIndex}
             role="presentation"
             title={cellInfo.display}
           >
-            <span class="cell-text">{cellInfo.display}</span>
+            <span class="cell-text">{cellInfo.hand.substring(0, 2)}</span>
           </div>
         {/if}
       {/each}
@@ -496,33 +515,29 @@
   .poker-grid { 
     display: grid; 
     grid-template-columns: repeat(13, 1fr); 
-    grid-template-rows: repeat(13, 1fr); 
-    gap: 0; 
-    border: var(--irongrid-border-width) solid var(--irongrid-color-border); 
+    grid-template-rows: repeat(13, auto); 
+    gap: var(--irongrid-cell-gap, 2px); 
   }
   /* 3x3 blocks: spacer tracks after T and 6 (A-T | 9-6 | 5-2) */
   .poker-grid.subgrid {
-    grid-template-columns: repeat(5, 1fr) var(--irongrid-subgrid-gap, 6px) repeat(4, 1fr) var(--irongrid-subgrid-gap, 6px) repeat(4, 1fr);
-    grid-template-rows: repeat(5, auto) var(--irongrid-subgrid-gap, 6px) repeat(4, auto) var(--irongrid-subgrid-gap, 6px) repeat(4, auto);
-    border: none;
+    grid-template-columns: repeat(5, 1fr) var(--irongrid-subgrid-gap, 4px) repeat(4, 1fr) var(--irongrid-subgrid-gap, 4px) repeat(4, 1fr);
+    grid-template-rows: repeat(5, auto) var(--irongrid-subgrid-gap, 4px) repeat(4, auto) var(--irongrid-subgrid-gap, 4px) repeat(4, auto);
   }
   .grid-cell { 
     aspect-ratio: 1; 
+    min-width: 0;
     display: flex; 
     align-items: center; 
     justify-content: center; 
     cursor: pointer; 
-    transition: opacity var(--irongrid-transition-fast); 
-    min-height: var(--irongrid-grid-min-cell-height); 
-    border-right: var(--irongrid-border-width) solid var(--irongrid-color-border); 
-    border-bottom: var(--irongrid-border-width) solid var(--irongrid-color-border); 
+    border-radius: var(--irongrid-cell-radius, 3px); 
+    transition: background-color var(--irongrid-transition-fast), box-shadow var(--irongrid-transition-fast); 
     user-select: none; 
     -webkit-user-select: none; 
     -moz-user-select: none; 
     -ms-user-select: none; 
   }
   button.grid-cell { 
-    background: none; 
     border: none; 
     padding: 0; 
     margin: 0; 
@@ -530,11 +545,14 @@
     color: inherit; 
     text-align: inherit; 
   }
-  .grid-cell:nth-child(13n) { 
-    border-right: none; 
+  .grid-cell.ring-full { 
+    box-shadow: inset 0 0 0 2px var(--irongrid-cell-ring-color, #1f2937); 
   }
-  .grid-cell:nth-child(n + 157) { 
-    border-bottom: none; 
+  .grid-cell.ring-partial { 
+    box-shadow: inset 0 0 0 1px var(--irongrid-cell-ring-color, #1f2937); 
+  }
+  .grid-cell.dead { 
+    opacity: 0.45; 
   }
   .grid-cell.dragging { 
     cursor: crosshair; 
@@ -548,48 +566,22 @@
     pointer-events: auto; 
   }
   .cell-text { 
-    font-size: var(--irongrid-font-size-base); 
-    font-weight: var(--irongrid-font-weight-semibold); 
-    color: var(--irongrid-color-text-primary); 
+    font-size: var(--irongrid-cell-font-size, 0.8125rem); 
+    font-weight: 500; 
+    letter-spacing: 0.01em; 
+    color: var(--irongrid-cell-muted-text, #a3a8b3); 
     pointer-events: none; 
     text-rendering: optimizeLegibility; 
     -webkit-font-smoothing: antialiased; 
     -moz-osx-font-smoothing: grayscale; 
   }
-  @media (max-width: 768px) { 
-    .poker-grid-container { 
-      padding: var(--irongrid-spacing-sm); 
-    } 
-    .poker-grid { 
-      gap: 0; 
-    } 
-    .grid-cell { 
-      min-height: var(--irongrid-grid-min-cell-height-tablet); 
-    } 
-    .cell-text { 
-      font-size: var(--irongrid-font-size-sm); 
-    } 
+  .grid-cell.in-range .cell-text { 
+    font-weight: 700; 
+    color: var(--irongrid-color-text-primary); 
   }
   @media (max-width: 480px) { 
-    .poker-grid-container { 
-      padding: var(--irongrid-grid-container-padding); 
-    } 
-    .grid-cell { 
-      min-height: var(--irongrid-grid-min-cell-height-mobile); 
-    } 
     .cell-text { 
-      font-size: var(--irongrid-font-size-xxs); 
-    } 
-  }
-  @media (max-width: 375px) { 
-    .poker-grid-container { 
-      padding: var(--irongrid-grid-container-padding-small); 
-    } 
-    .grid-cell { 
-      min-height: var(--irongrid-grid-min-cell-height-small); 
-    } 
-    .cell-text { 
-      font-size: var(--irongrid-font-size-xs); 
+      font-size: var(--irongrid-cell-font-size-mobile, 0.6875rem); 
     } 
   }
 
