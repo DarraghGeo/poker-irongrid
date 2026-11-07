@@ -130,25 +130,14 @@
   function normalizeTokens(input) {
     if (!input || !input.trim()) return [];
     const symbolMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-    const validRanks = new Set(['A','K','Q','J','T','9','8','7','6','5','4','3','2']);
-    const validSuits = new Set(['c','d','h','s']);
-    return input
-      .replace(/[_,]/g, ' ')
-      .trim()
-      .split(/\s+/)
-      .map(tok => {
-        if (!tok) return null;
-        let t = tok.trim();
-        t = t.replace(/[♣♦♥♠]/g, (m) => symbolMap[m] || m);
-        const rank = t.charAt(0).toUpperCase();
-        const suitRaw = t.charAt(1) || '';
-        const suit = suitRaw.toLowerCase();
-        if (validRanks.has(rank) && validSuits.has(suit)) {
-          return rank + suit;
-        }
-        return null;
-      })
-      .filter(Boolean);
+    const text = input.replace(/[♣♦♥♠]/g, (m) => symbolMap[m]);
+    // Cards with or without separators: 'As Ks', 'AsKs', 'A♠K♠', 'as,ks' all give ['As', 'Ks']
+    const cards = [];
+    for (const [, rank, suit] of text.matchAll(/([AKQJT2-9])([cdhs])/gi)) {
+      const card = rank.toUpperCase() + suit.toLowerCase();
+      if (!cards.includes(card)) cards.push(card);
+    }
+    return cards;
   }
 
   /** 

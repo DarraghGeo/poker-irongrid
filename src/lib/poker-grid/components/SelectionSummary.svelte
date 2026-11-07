@@ -74,7 +74,11 @@
     </span>
   </span>
   <div class="flex items-center gap-2">
-    {#if showEquity}
+    {#if evaluator && heroCards?.length !== 2 && selected + highlighted > 0}
+      <div class="text-xs" style="color: var(--irongrid-color-text-secondary);">
+        <span>Enter 2 hero cards for equity</span>
+      </div>
+    {:else if showEquity}
       <div
         class="text-xs equity-readout"
         class:equity-pending={equityPending}
