@@ -46,7 +46,8 @@
     { key: 'straight', label: 'Straight' },
     { key: 'flush', label: 'Flush' },
     { key: 'combo', label: 'Combo' },
-    { key: 'backdoor', label: 'Bkdr' }
+    { key: 'backdoorFlush', label: 'Bkdr F', title: 'Backdoor flush draw (with a backdoor straight draw too)' },
+    { key: 'backdoorStraight', label: 'Bkdr S', title: 'Backdoor straight draw' }
   ];
   /** Hero's equity against the combos, in five bands. */
   const EQUITY_COLUMNS = [
@@ -279,7 +280,7 @@
       <span></span>
       {#each columns as column (column.key)}
         {@const combos = table.colCombos.get(column.key) || []}
-        <button type="button" class="head" disabled={!combos.length} onclick={(e) => select(e, combos)}>{column.label}</button>
+        <button type="button" class="head" disabled={!combos.length} title={column.title || ''} onclick={(e) => select(e, combos)}>{column.label}</button>
       {/each}
       {#each table.rows as row (row.key)}
         <button type="button" class="head row-head" onclick={(e) => select(e, table.rowCombos.get(row.key) || [])}>{row.label}</button>

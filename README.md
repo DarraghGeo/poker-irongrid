@@ -227,7 +227,7 @@ The component includes comprehensive filtering options:
 - **Loading a range** (range select) fills a fresh grid with the first color; nothing is selected.
 - **Controls** (`showControls`): color chips showing each color's share of the range (%), combos (#) or hero's
   equity (Eq), and × to clear; the share selected with All / Invert; a **Made × Draw** table (made hand by draw:
-  none, straight, flush, combo, backdoor flush) or **Made × Equity** (hero's equity against the hands, in 20%
+  none, straight, flush, combo, backdoor flush, backdoor straight) or **Made × Equity** (hero's equity against the hands, in 20%
   bands); rank filters; and a suit matrix with Suited / Offsuit. Draws must use a hole card (poker-extval with
   `holeCards`). Clicking any table, rank or suit cell selects its hands (ctrl/cmd adds, shift removes); a color
   chip then colors the selection.

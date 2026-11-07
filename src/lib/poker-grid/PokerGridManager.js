@@ -667,8 +667,8 @@ export class PokerGridManager {
    * Classify combos on a board for the Made x Draw table: made hand (row) and draw (column), from
    * poker-extval with the hole cards, so draws must use a hole card. Cached per board.
    * Made: highCard, onePair, twoPair, trips, straight, flush, fullHouse, quads, straightFlush.
-   * Draw (flop/turn only): combo (flush + straight draw), flush, straight, backdoor (backdoor flush draw,
-   * flop only), none.
+   * Draw (flop/turn only): combo (flush + straight draw), flush, straight, backdoorFlush, backdoorStraight
+   * (flop only; a hand with both backdoor draws counts as backdoorFlush), none.
    * @param {string[]} combos - Combos
    * @param {string[]} boardCards - Board (3-5 cards)
    * @returns {Map<string, {made: string, draw: string}>}
@@ -715,7 +715,8 @@ export class PokerGridManager {
         if (flushDraw && straightDraw) draw = 'combo';
         else if (flushDraw) draw = 'flush';
         else if (straightDraw) draw = 'straight';
-        else if (boardCards.length === 3 && evaluation.isBackdoorFlushDraw) draw = 'backdoor';
+        else if (boardCards.length === 3 && evaluation.isBackdoorFlushDraw) draw = 'backdoorFlush';
+        else if (boardCards.length === 3 && evaluation.isBackdoorStraightDraw) draw = 'backdoorStraight';
       }
       return { made, draw };
     } catch (error) {
