@@ -85,6 +85,7 @@ npm install poker-irongrid
 | `defaultColor` | `string` | `'hsl(0, 0%, 100%)'` | Default background color for uncolored hands |
 | `defaultSelectedColor` | `string` | `'hsl(0, 0%, 85%)'` | Default color for selected hands without explicit color |
 | `evaluator` | `boolean` | `false` | Show hero's live equity against the hands on the grid (requires hero cards) |
+| `equityColors` | `boolean` | `true` | With `evaluator`, color villain hands by hero's equity against each combo: equal-width bands, one per color (`colors[0]` = hero's lowest equity). Hands you color yourself keep their color |
 | `subgrid` | `boolean` | `false` | Split the grid into 3x3 blocks (A–T, 9–6, 5–2) with space after the T and 6 rows/columns; spacing set by `--irongrid-subgrid-gap` (default `6px`) |
 | `preflopTableUrl` | `string \| null` | `null` | URL of poker-bitvaljs's `bench/preflop-table.bin` for exact preflop equity (Monte Carlo without it) |
 
@@ -222,7 +223,11 @@ When `evaluator={true}`, hero's equity is calculated live (asynchronously) whene
 board, dead cards or the hands on the grid change; there is no button to press.
 - The summary shows hero vs. villain equity against every selected or colored combo
 - The color buttons' **Eq** mode shows hero's equity against each color's hands
-- Both come from one poker-bitvaljs `compareRangeHands` call: exact on the flop, turn and river
+- With `equityColors` (default), the villain hands are colored by hero's equity against each combo, in
+  one equal-width band per color (6 colors: 0–16.7%, 16.7–33.3%, … 83.3–100%, `colors[0]` lowest), so the
+  color buttons show each band's count, share and equity. Hands you color yourself keep their color; band
+  colors follow the selection and go away without hero cards
+- All of it comes from one poker-bitvaljs `compareRangeHands` call: exact on the flop, turn and river
   (a few ms), Monte Carlo preflop and on 1-2 card boards
 - Pass `preflopTableUrl` for exact, near-instant preflop equity (the table is ~1.1 MB, fetched once):
 

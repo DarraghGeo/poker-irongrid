@@ -29,6 +29,20 @@
     return index + 1 + (split ? (index >= 5 ? 1 : 0) + (index >= 9 ? 1 : 0) : 0);
   }
 
+  /**
+   * Hairline frame around each 3x3 block (subgrid): inset shadows on the block's edge cells, so cells stay
+   * flush with their neighbours and only the blocks are outlined.
+   */
+  function blockFrame(row, col, split) {
+    if (!split) return '';
+    const shadows = [];
+    if (row === 0 || row === 5 || row === 9) shadows.push(`inset 0 var(--irongrid-border-width) 0 var(--irongrid-color-border)`);
+    if (row === 4 || row === 8 || row === 12) shadows.push(`inset 0 calc(-1 * var(--irongrid-border-width)) 0 var(--irongrid-color-border)`);
+    if (col === 0 || col === 5 || col === 9) shadows.push(`inset var(--irongrid-border-width) 0 0 var(--irongrid-color-border)`);
+    if (col === 4 || col === 8 || col === 12) shadows.push(`inset calc(-1 * var(--irongrid-border-width)) 0 0 var(--irongrid-color-border)`);
+    return shadows.length ? `box-shadow: ${shadows.join(', ')};` : '';
+  }
+
   /** The grid cell under a point (or null), from the cells' own positions, so it works with any spacing. */
   function cellAtPoint(gridElement, x, y) {
     const cells = gridElement.querySelectorAll('[data-row]');
@@ -431,7 +445,7 @@
           <button
             type="button"
             class="grid-cell {isDragging ? 'dragging' : ''} {interactive ? '' : showTips ? 'non-interactive show-tips' : 'non-interactive'}"
-            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
+            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)}; {blockFrame(rowIndex, colIndex, subgrid)}"
             data-row={rowIndex}
             data-col={colIndex}
             onclick={(e) => handleClick(e, cellInfo)}
@@ -446,7 +460,7 @@
         {:else}
           <div
             class="grid-cell non-interactive"
-            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
+            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)}; {blockFrame(rowIndex, colIndex, subgrid)}"
             data-row={rowIndex}
             data-col={colIndex}
             role="presentation"

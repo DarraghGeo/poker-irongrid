@@ -37,6 +37,11 @@
    * Without it, preflop equity is a Monte Carlo estimate.
    */
   export let preflopTableUrl = null;
+  /**
+   * With `evaluator`, color the villain hands by hero's equity against each combo: one equal-width band per
+   * color (colors[0] = hero's lowest equity). Hands you color yourself keep their color.
+   */
+  export let equityColors = true;
   $: if (evaluator && preflopTableUrl) loadPreflopTable(preflopTableUrl);
   /** Predefined ranges for range selection. Array of {name: string, abbreviation: string} */
   export let ranges = [];
@@ -113,11 +118,26 @@
   let lastEquityKey = '';
 
   $: equityKey = evaluator
-    ? JSON.stringify({ heroCards, boardCards, deadCards, hands: visibleHands, colors })
+    ? JSON.stringify({ heroCards, boardCards, deadCards, hands: visibleHands, colors, equityColors })
     : '';
   $: if (equityKey !== lastEquityKey) {
     lastEquityKey = equityKey;
     scheduleEquity();
+  }
+
+  /** Colors set by equity banding (combo -> color), so they can be updated or removed later. */
+  let autoColors = new Map();
+
+  /** Apply (or, with no equity, remove) the equity band colors. */
+  function applyEquityColors(byCombo) {
+    if (!equityColors && autoColors.size === 0) return;
+    const result = manager.applyEquityBands(internalHands, equityColors ? byCombo || {} : {}, colors, autoColors);
+    autoColors = result.autoColors;
+    if (result.changed) {
+      internalHands = result.hands;
+      hands = result.hands;
+      dispatch('selectionChange', { hands: result.hands, visibleHands });
+    }
   }
 
   function scheduleEquity() {
@@ -126,14 +146,21 @@
     if (!evaluator || heroCards?.length !== 2) {
       equity = null;
       equityPending = false;
+      // Remove the band colors outside this reactive update (as results are applied, after it)
+      equityTimer = setTimeout(() => {
+        if (request === equityRequest) applyEquityColors(null);
+      }, 0);
       return;
     }
     equityPending = true;
     // A short debounce coalesces bursts (typing cards, dragging across the grid)
     equityTimer = setTimeout(async () => {
       try {
-        const result = await manager.calculateEquity(visibleHands, heroCards, boardCards, deadCards, colors);
-        if (request === equityRequest) equity = result;
+        const result = await manager.calculateEquity(visibleHands, heroCards, boardCards, deadCards, colors, autoColors);
+        if (request === equityRequest) {
+          equity = result;
+          applyEquityColors(result?.byCombo);
+        }
       } catch (error) {
         if (request === equityRequest) equity = null;
       } finally {
@@ -315,6 +342,7 @@
       on:clearAll={() => {
         internalHands = {};
         hands = {};
+        autoColors = new Map();
       }}
     />
   </div>

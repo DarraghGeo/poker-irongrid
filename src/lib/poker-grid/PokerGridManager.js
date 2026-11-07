@@ -654,31 +654,38 @@ export class PokerGridManager {
   /**
    * Hero's equity against the villain hands on the grid, overall and per color, from one
    * poker-bitvaljs compareRangeHands call (each villain combo's result against hero's hand).
-   * Villain hands are the combos that are selected or colored; hands holding a dead, board or
-   * hero card are left out.
+   * Villain hands are the combos that are selected or colored by hand (colors in `autoColors`, set by
+   * applyEquityBands, don't count); hands holding a dead, board or hero card are left out.
    * @param {Object} hands - Hands object
    * @param {string[]} heroCards - Hero cards (two)
    * @param {string[]} boardCards - Board cards (0-5)
    * @param {string[]} deadCards - Dead cards (may include hero and board cards)
    * @param {string[]} colors - Colors array
-   * @returns {Promise<{hero: number|null, villain: number|null, combos: number, byColor: Object}|null>}
-   *   Equities in percent (null when hero meets no villain combo); null without two hero cards.
+   * @param {Map<string, string>|null} autoColors - Colors applyEquityBands set (combo -> color)
+   * @returns {Promise<{hero: number|null, villain: number|null, combos: number, byColor: Object, byCombo: Object}|null>}
+   *   Equities in percent (null when hero meets no villain combo); byCombo is hero's equity against each
+   *   villain combo. Null without two hero cards.
    */
-  async calculateEquity(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors) {
+  async calculateEquity(hands = this.hands, heroCards = this.heroCards, boardCards = this.boardCards, deadCards = this.deadCards, colors = this.colors, autoColors = null) {
     if (heroCards?.length !== 2) return null;
     const board = boardCards || [];
     const otherDead = (deadCards || []).filter(card => !heroCards.includes(card) && !board.includes(card));
     const blocked = new Set([...heroCards, ...board, ...otherDead]);
 
+    const colorOf = (h) => (hands[h] || []).find(item => typeof item === 'string' && item.startsWith('hsl('));
+    const coloredByHand = (h) => {
+      const color = colorOf(h);
+      return !!color && !(autoColors && autoColors.get(h) === color);
+    };
     const villainHands = Object.keys(hands || {}).filter(h =>
       isCombo(h) &&
-      (this.hasExplicitColor(hands[h]) || this.isSelected(hands[h])) &&
+      (coloredByHand(h) || this.isSelected(hands[h])) &&
       !blocked.has(h.substring(0, 2)) && !blocked.has(h.substring(2, 4))
     );
 
     const byColor = {};
     (colors || []).forEach(c => { byColor[c] = null; });
-    if (villainHands.length === 0) return { hero: null, villain: null, combos: 0, byColor };
+    if (villainHands.length === 0) return { hero: null, villain: null, combos: 0, byColor, byCombo: {} };
 
     // Preflop, wait for the table if one is loading (otherwise the result would be Monte Carlo)
     if (board.length === 0 && preflopTableLoad) await preflopTableLoad;
@@ -708,12 +715,59 @@ export class PokerGridManager {
     };
 
     const hero = heroEquityAgainst(villainHands);
+    const byCombo = {};
+    villainHands.forEach(h => { byCombo[h] = heroEquityAgainst([h]); });
     (colors || []).forEach(color => {
       const colorHands = villainHands.filter(h => hands[h].includes(color));
       byColor[color] = colorHands.length > 0 ? heroEquityAgainst(colorHands) : null;
     });
 
-    return { hero, villain: hero === null ? null : 100 - hero, combos: villainHands.length, byColor };
+    return { hero, villain: hero === null ? null : 100 - hero, combos: villainHands.length, byColor, byCombo };
+  }
+
+  /**
+   * Color villain combos by hero's equity against them: one equal-width band per color, colors[0] for
+   * hero's lowest equity (villain's strongest hands) up to the last color for hero's highest. With 6
+   * colors the bands are 0-16.7%, 16.7-33.3%, ... 83.3-100%.
+   * Only combos without a color, or still holding the color this method gave them, are recolored, so
+   * hand-applied colors stay. Colors this method set are removed from combos that are no longer in
+   * `byCombo` (deselected, dead, or no equity).
+   * @param {Object} hands - Hands object
+   * @param {Object} byCombo - Hero's equity (%) against each villain combo, from calculateEquity
+   * @param {string[]} colors - Colors, one per band
+   * @param {Map<string, string>} autoColors - Colors set by earlier calls (combo -> color)
+   * @returns {{hands: Object, autoColors: Map<string, string>, changed: boolean}}
+   */
+  applyEquityBands(hands, byCombo, colors, autoColors = new Map()) {
+    const next = new Map();
+    const newHands = { ...hands };
+    let changed = false;
+    const colorOf = (values) => (values || []).find(item => typeof item === 'string' && item.startsWith('hsl('));
+    const setColor = (h, color) => {
+      const kept = (newHands[h] || []).filter(item => !(typeof item === 'string' && item.startsWith('hsl(')));
+      newHands[h] = color ? [...kept, color] : kept;
+      changed = true;
+    };
+
+    if (colors && colors.length > 0) {
+      const bandWidth = 100 / colors.length;
+      Object.entries(byCombo || {}).forEach(([h, equity]) => {
+        if (equity === null || equity === undefined || Number.isNaN(equity)) return;
+        const current = colorOf(newHands[h]);
+        if (current && autoColors.get(h) !== current) return; // colored by hand
+        const color = colors[Math.min(colors.length - 1, Math.floor(equity / bandWidth))];
+        next.set(h, color);
+        if (current !== color) setColor(h, color);
+      });
+    }
+
+    // Combos that lost their equity color (no longer villain hands, or no equity)
+    autoColors.forEach((color, h) => {
+      if (next.has(h) || !newHands[h]) return;
+      if (colorOf(newHands[h]) === color) setColor(h, null);
+    });
+
+    return { hands: changed ? newHands : hands, autoColors: next, changed };
   }
 
   /**
