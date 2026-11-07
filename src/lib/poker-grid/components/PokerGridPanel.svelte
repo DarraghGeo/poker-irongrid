@@ -25,6 +25,8 @@
   export let showSummary = true;
   export let showTips = false;
   export let enableDetailsPanel = false;
+  /** Split the grid into 3x3 blocks (A-T, 9-6, 5-2) with space between them. */
+  export let subgrid = false;
   export let evaluator = false;
   export let defaultColor = 'hsl(0, 0%, 100%)';
   export let defaultSelectedColor = 'hsl(0, 0%, 85%)';
@@ -265,6 +267,7 @@
       {interactive}
       {showTips}
       {enableDetailsPanel}
+      {subgrid}
       {manager}
       on:selectionChange={handleSelectionChange}
       on:cellDetails={handleCellDetails}

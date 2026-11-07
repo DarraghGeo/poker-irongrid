@@ -53,6 +53,7 @@
 
   /* Border Variables */
   --irongrid-border-width: 1px;
+  --irongrid-subgrid-gap: 6px; /* space between the 3x3 blocks with subgrid */
   --irongrid-border-radius-sm: 0.125rem;
   --irongrid-border-radius-md: 0.25rem;
   --irongrid-border-radius-lg: 0.375rem;

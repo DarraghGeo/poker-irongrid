@@ -85,6 +85,7 @@ npm install poker-irongrid
 | `defaultColor` | `string` | `'hsl(0, 0%, 100%)'` | Default background color for uncolored hands |
 | `defaultSelectedColor` | `string` | `'hsl(0, 0%, 85%)'` | Default color for selected hands without explicit color |
 | `evaluator` | `boolean` | `false` | Show hero's live equity against the hands on the grid (requires hero cards) |
+| `subgrid` | `boolean` | `false` | Split the grid into 3x3 blocks (A–T, 9–6, 5–2) with space after the T and 6 rows/columns; spacing set by `--irongrid-subgrid-gap` (default `6px`) |
 | `preflopTableUrl` | `string \| null` | `null` | URL of poker-bitvaljs's `bench/preflop-table.bin` for exact preflop equity (Monte Carlo without it) |
 
 #### Initial State Props

@@ -1,6 +1,7 @@
 <script>
   import PokerGridPanel from '$lib/poker-grid/index.js';
   import preflopTableUrl from 'poker-bitvaljs/bench/preflop-table.bin?url';
+  let subgrid = true;
   
   // Example ranges - you can customize these
   const ranges = [
@@ -64,7 +65,11 @@
     </div>
 
     <div class="bg-white rounded-lg shadow-lg p-3 sm:p-6 overflow-x-auto">
+      <label class="mb-2 flex items-center gap-2 text-sm">
+        <input type="checkbox" bind:checked={subgrid} /> Subgrid (3x3 blocks)
+      </label>
       <PokerGridPanel
+        {subgrid}
         bind:hands
         bind:visibleHands
         bind:deadCards

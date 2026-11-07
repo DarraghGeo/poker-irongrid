@@ -18,6 +18,28 @@
   export let showTips = false;
   /** Whether to enable double-click details panel. */
   export let enableDetailsPanel = false;
+  /**
+   * Split the grid into 3x3 blocks: extra space after the T and 6 rows/columns (A-T, 9-6, 5-2).
+   * The space is set by the --irongrid-subgrid-gap CSS variable.
+   */
+  export let subgrid = false;
+
+  /** CSS grid line for a row/column index: with subgrid, spacer tracks follow T (index 4) and 6 (index 8). */
+  function gridLine(index, split) {
+    return index + 1 + (split ? (index >= 5 ? 1 : 0) + (index >= 9 ? 1 : 0) : 0);
+  }
+
+  /** The grid cell under a point (or null), from the cells' own positions, so it works with any spacing. */
+  function cellAtPoint(gridElement, x, y) {
+    const cells = gridElement.querySelectorAll('[data-row]');
+    for (const cell of cells) {
+      const r = cell.getBoundingClientRect();
+      if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) {
+        return { element: cell, rect: r, row: Number(cell.dataset.row), col: Number(cell.dataset.col) };
+      }
+    }
+    return null;
+  }
 
   let isDragging = false;
   let tooltip = { visible: false, x: 0, y: 0, content: '' };
@@ -187,19 +209,16 @@
   function handleMouseMove(event) {
     if (!isDragging) return;
     const gridElement = event.currentTarget;
-    const rect = gridElement.getBoundingClientRect();
-    const cellSize = rect.width / 13;
     const coords = getEventCoordinates(event);
-    const x = coords.x - rect.left;
-    const y = coords.y - rect.top;
-    const colIndex = Math.floor(x / cellSize);
-    const rowIndex = Math.floor(y / cellSize);
-    if (colIndex < 0 || colIndex >= 13 || rowIndex < 0 || rowIndex >= 13) return;
-    const cellInfo = getCellInfo(rowIndex, colIndex);
-    const cellRect = { left: colIndex * cellSize, top: rowIndex * cellSize, width: cellSize, height: cellSize };
+    const hit = cellAtPoint(gridElement, coords.x, coords.y);
+    if (!hit) return;
+    const cellInfo = getCellInfo(hit.row, hit.col);
+    const cellSize = Math.min(hit.rect.width, hit.rect.height);
     const bufferSize = cellSize * 0.75;
     const bufferOffset = (cellSize - bufferSize) / 2;
-    const inHitZone = (x - cellRect.left) >= bufferOffset && (x - cellRect.left) <= bufferOffset + bufferSize && (y - cellRect.top) >= bufferOffset && (y - cellRect.top) <= bufferOffset + bufferSize;
+    const x = coords.x - hit.rect.left;
+    const y = coords.y - hit.rect.top;
+    const inHitZone = x >= bufferOffset && x <= bufferOffset + bufferSize && y >= bufferOffset && y <= bufferOffset + bufferSize;
     if (!inHitZone) return;
     if (!dragCells.has(cellInfo.hand)) {
       dragCells.add(cellInfo.hand);
@@ -404,7 +423,7 @@
 </script>
 
   <div class="poker-grid-container" role="region" aria-label="Poker hand grid container">
-    <div class="poker-grid" bind:this={gridElement} onmousemove={handleMouseMove} role="application" aria-label="Poker hand selection grid" tabindex={interactive ? 0 : -1} onmouseup={handleMouseUp}>
+    <div class="poker-grid" class:subgrid bind:this={gridElement} onmousemove={handleMouseMove} role="application" aria-label="Poker hand selection grid" tabindex={interactive ? 0 : -1} onmouseup={handleMouseUp}>
     {#each Array(13) as _, rowIndex}
       {#each Array(13) as __, colIndex}
         {@const cellInfo = getCellInfo(rowIndex, colIndex)}
@@ -412,7 +431,9 @@
           <button
             type="button"
             class="grid-cell {isDragging ? 'dragging' : ''} {interactive ? '' : showTips ? 'non-interactive show-tips' : 'non-interactive'}"
-            style="background: {gradients[cellInfo.hand]} !important"
+            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
+            data-row={rowIndex}
+            data-col={colIndex}
             onclick={(e) => handleClick(e, cellInfo)}
             ondblclick={(e) => handleDoubleClick(e, cellInfo)}
             onmousedown={(e) => handleMouseDown(e, cellInfo)}
@@ -425,7 +446,9 @@
         {:else}
           <div
             class="grid-cell non-interactive"
-            style="background: {gradients[cellInfo.hand]} !important"
+            style="background: {gradients[cellInfo.hand]} !important; grid-row: {gridLine(rowIndex, subgrid)}; grid-column: {gridLine(colIndex, subgrid)};"
+            data-row={rowIndex}
+            data-col={colIndex}
             role="presentation"
             title={cellInfo.display}
           >
@@ -462,6 +485,12 @@
     grid-template-rows: repeat(13, 1fr); 
     gap: 0; 
     border: var(--irongrid-border-width) solid var(--irongrid-color-border); 
+  }
+  /* 3x3 blocks: spacer tracks after T and 6 (A-T | 9-6 | 5-2) */
+  .poker-grid.subgrid {
+    grid-template-columns: repeat(5, 1fr) var(--irongrid-subgrid-gap, 6px) repeat(4, 1fr) var(--irongrid-subgrid-gap, 6px) repeat(4, 1fr);
+    grid-template-rows: repeat(5, auto) var(--irongrid-subgrid-gap, 6px) repeat(4, auto) var(--irongrid-subgrid-gap, 6px) repeat(4, auto);
+    border: none;
   }
   .grid-cell { 
     aspect-ratio: 1; 
